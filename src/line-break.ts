@@ -276,6 +276,9 @@ export function normalizeLineStart(
   return chunkIndex < 0 ? null : cursor
 }
 
+// Specialized hot-path counter that mirrors walkPreparedLines break semantics
+// without tracking cursors/widths. Must stay aligned — see layout.test.ts
+// "countPreparedLines stays aligned with the walked line counter".
 export function countPreparedLines(prepared: PreparedLineBreakData, maxWidth: number): number {
   return walkPreparedLinesRaw(prepared, maxWidth)
 }
