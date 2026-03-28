@@ -9,7 +9,7 @@ export type LineBreakCursor = {
 export type PreparedLineBreakData = {
   widths: number[]
   lineEndFitAdvances: number[]
-  lineEndPaintAdvances: number[] // Painted contribution before terminal line-end letter-spacing
+  lineEndPaintAdvances: number[]
   kinds: SegmentBreakKind[]
   simpleLineWalkFastPath: boolean
   breakableFitAdvances: (number[] | null)[]
@@ -166,56 +166,28 @@ function getBreakableCandidateFitWidth(
     : candidatePaintWidth + prepared.letterSpacing
 }
 
-function getTerminalLetterSpacing(
-  prepared: PreparedLineBreakData,
-  startSegmentIndex: number,
-  startGraphemeIndex: number,
-  endSegmentIndex: number,
-  endGraphemeIndex: number,
-): number {
-  if (prepared.letterSpacing === 0) return 0
+function fitSoftHyphenBreak(
+  graphemeFitAdvances: number[],
+  initialWidth: number,
+  maxWidth: number,
+  lineFitEpsilon: number,
+  discretionaryHyphenWidth: number,
+  letterSpacing: number,
+): { fitCount: number, fittedWidth: number } {
+  let fitCount = 0
+  let fittedWidth = initialWidth
 
-  if (endGraphemeIndex > 0) {
-    return prepared.spacingGraphemeCounts[endSegmentIndex]! > 0
-      ? prepared.letterSpacing
-      : 0
+  while (fitCount < graphemeFitAdvances.length) {
+    const nextWidth = fittedWidth + graphemeFitAdvances[fitCount]! + letterSpacing
+    const nextLineWidth = fitCount + 1 < graphemeFitAdvances.length
+      ? nextWidth + discretionaryHyphenWidth
+      : nextWidth
+    if (nextLineWidth > maxWidth + lineFitEpsilon) break
+    fittedWidth = nextWidth
+    fitCount++
   }
 
-  for (let i = endSegmentIndex - 1; i >= startSegmentIndex; i--) {
-    const kind = prepared.kinds[i]!
-    if (kind === 'space' || kind === 'zero-width-break' || kind === 'hard-break') continue
-    if (kind === 'soft-hyphen') {
-      if (i === endSegmentIndex - 1) return 0
-      continue
-    }
-
-    if (i === startSegmentIndex && startGraphemeIndex > 0) {
-      return prepared.letterSpacing
-    }
-
-    return prepared.spacingGraphemeCounts[i]! > 0
-      ? prepared.letterSpacing
-      : 0
-  }
-
-  return 0
-}
-
-function finalizeLinePaintWidth(
-  prepared: PreparedLineBreakData,
-  width: number,
-  startSegmentIndex: number,
-  startGraphemeIndex: number,
-  endSegmentIndex: number,
-  endGraphemeIndex: number,
-): number {
-  return width + getTerminalLetterSpacing(
-    prepared,
-    startSegmentIndex,
-    startGraphemeIndex,
-    endSegmentIndex,
-    endGraphemeIndex,
-  )
+  return { fitCount, fittedWidth }
 }
 
 function findChunkIndexForStart(prepared: PreparedLineBreakData, segmentIndex: number): number {
@@ -263,8 +235,7 @@ function normalizeLineStartInChunk(
   return chunkIndex + 1
 }
 
-// Mutates `cursor` to the next renderable line start and returns its chunk index.
-export function normalizePreparedLineStart(
+function normalizeLineStartChunkIndex(
   prepared: PreparedLineBreakData,
   cursor: LineBreakCursor,
 ): number {
@@ -293,6 +264,21 @@ function normalizeLineStartChunkIndexFromHint(
   return normalizeLineStartInChunk(prepared, nextChunkIndex, cursor)
 }
 
+export function normalizeLineStart(
+  prepared: PreparedLineBreakData,
+  start: LineBreakCursor,
+): LineBreakCursor | null {
+  const cursor = {
+    segmentIndex: start.segmentIndex,
+    graphemeIndex: start.graphemeIndex,
+  }
+  const chunkIndex = normalizeLineStartChunkIndex(prepared, cursor)
+  return chunkIndex < 0 ? null : cursor
+}
+
+// Specialized hot-path counter that mirrors walkPreparedLines break semantics
+// without tracking cursors/widths. Must stay aligned — see layout.test.ts
+// "countPreparedLines stays aligned with the walked line counter".
 export function countPreparedLines(prepared: PreparedLineBreakData, maxWidth: number): number {
   return walkPreparedLinesRaw(prepared, maxWidth)
 }
@@ -511,38 +497,19 @@ export function walkPreparedLinesRaw(
     pendingBreakKind = null
   }
 
-  function getCurrentLinePaintWidth(): number {
-    return (
-      pendingBreakKind === 'soft-hyphen' &&
-      pendingBreakSegmentIndex === lineEndSegmentIndex &&
-      lineEndGraphemeIndex === 0
-    )
-      ? pendingBreakPaintWidth
-      : lineW
-  }
-
   function emitCurrentLine(
     endSegmentIndex = lineEndSegmentIndex,
     endGraphemeIndex = lineEndGraphemeIndex,
-    width?: number,
+    width = lineW,
   ): void {
     lineCount++
-    if (onLine !== undefined) {
-      onLine(
-        finalizeLinePaintWidth(
-          prepared,
-          width ?? getCurrentLinePaintWidth(),
-          lineStartSegmentIndex,
-          lineStartGraphemeIndex,
-          endSegmentIndex,
-          endGraphemeIndex,
-        ),
-        lineStartSegmentIndex,
-        lineStartGraphemeIndex,
-        endSegmentIndex,
-        endGraphemeIndex,
-      )
-    }
+    onLine?.(
+      width,
+      lineStartSegmentIndex,
+      lineStartGraphemeIndex,
+      endSegmentIndex,
+      endGraphemeIndex,
+    )
     lineW = 0
     hasContent = false
     clearPendingBreak()
@@ -621,6 +588,40 @@ export function walkPreparedLinesRaw(
     }
   }
 
+  function continueSoftHyphenBreakableSegment(segmentIndex: number): boolean {
+    if (pendingBreakKind !== 'soft-hyphen') return false
+    const fitWidths = breakableFitAdvances[segmentIndex]
+    if (fitWidths == null) return false
+    const { fitCount, fittedWidth } = fitSoftHyphenBreak(
+      fitWidths,
+      lineW,
+      maxWidth,
+      lineFitEpsilon,
+      discretionaryHyphenWidth,
+      prepared.letterSpacing,
+    )
+    if (fitCount === 0) return false
+
+    lineW = fittedWidth
+    lineEndSegmentIndex = segmentIndex
+    lineEndGraphemeIndex = fitCount
+    clearPendingBreak()
+
+    if (fitCount === fitWidths.length) {
+      lineEndSegmentIndex = segmentIndex + 1
+      lineEndGraphemeIndex = 0
+      return true
+    }
+
+    emitCurrentLine(
+      segmentIndex,
+      fitCount,
+      fittedWidth + discretionaryHyphenWidth,
+    )
+    appendBreakableSegmentFrom(segmentIndex, fitCount)
+    return true
+  }
+
   function emitEmptyChunk(chunk: { startSegmentIndex: number, consumedEndSegmentIndex: number }): void {
     lineCount++
     onLine?.(0, chunk.startSegmentIndex, 0, chunk.consumedEndSegmentIndex, 0)
@@ -695,6 +696,11 @@ export function walkPreparedLinesRaw(
           pendingBreakFitWidth <= fitLimit
         ) {
           emitCurrentLine(pendingBreakSegmentIndex, 0, pendingBreakPaintWidth)
+          continue
+        }
+
+        if (pendingBreakKind === 'soft-hyphen' && continueSoftHyphenBreakableSegment(i)) {
+          i++
           continue
         }
 
@@ -792,8 +798,6 @@ function stepPreparedChunkLineGeometry(
   const lineFitEpsilon = engineProfile.lineFitEpsilon
   const fitLimit = maxWidth + lineFitEpsilon
 
-  const lineStartSegmentIndex = cursor.segmentIndex
-  const lineStartGraphemeIndex = cursor.graphemeIndex
   let lineW = 0
   let hasContent = false
   let lineEndSegmentIndex = cursor.segmentIndex
@@ -803,32 +807,22 @@ function stepPreparedChunkLineGeometry(
   let pendingBreakPaintWidth = 0
   let pendingBreakKind: SegmentBreakKind | null = null
 
-  function getCurrentLinePaintWidth(): number {
-    return (
-      pendingBreakKind === 'soft-hyphen' &&
-      pendingBreakSegmentIndex === lineEndSegmentIndex &&
-      lineEndGraphemeIndex === 0
-    )
-      ? pendingBreakPaintWidth
-      : lineW
+  function clearPendingBreak(): void {
+    pendingBreakSegmentIndex = -1
+    pendingBreakFitWidth = 0
+    pendingBreakPaintWidth = 0
+    pendingBreakKind = null
   }
 
   function finishLine(
     endSegmentIndex = lineEndSegmentIndex,
     endGraphemeIndex = lineEndGraphemeIndex,
-    width = getCurrentLinePaintWidth(),
+    width = lineW,
   ): number | null {
     if (!hasContent) return null
     cursor.segmentIndex = endSegmentIndex
     cursor.graphemeIndex = endGraphemeIndex
-    return finalizeLinePaintWidth(
-      prepared,
-      width,
-      lineStartSegmentIndex,
-      lineStartGraphemeIndex,
-      endSegmentIndex,
-      endGraphemeIndex,
-    )
+    return width
   }
 
   function startLineAtSegment(segmentIndex: number, width: number): void {
@@ -900,8 +894,36 @@ function stepPreparedChunkLineGeometry(
     return null
   }
 
-  function maybeFinishAtSoftHyphen(): number | null {
+  function maybeFinishAtSoftHyphen(segmentIndex: number): number | null {
     if (pendingBreakKind !== 'soft-hyphen' || pendingBreakSegmentIndex < 0) return null
+
+    const fitWidths = breakableFitAdvances[segmentIndex] ?? null
+    if (fitWidths !== null) {
+      const { fitCount, fittedWidth } = fitSoftHyphenBreak(
+        fitWidths,
+        lineW,
+        maxWidth,
+        lineFitEpsilon,
+        discretionaryHyphenWidth,
+        prepared.letterSpacing,
+      )
+
+      if (fitCount === fitWidths.length) {
+        lineW = fittedWidth
+        lineEndSegmentIndex = segmentIndex + 1
+        lineEndGraphemeIndex = 0
+        clearPendingBreak()
+        return null
+      }
+
+      if (fitCount > 0) {
+        return finishLine(
+          segmentIndex,
+          fitCount,
+          fittedWidth + discretionaryHyphenWidth,
+        )
+      }
+    }
 
     if (pendingBreakFitWidth <= fitLimit) {
       return finishLine(pendingBreakSegmentIndex, 0, pendingBreakPaintWidth)
@@ -962,7 +984,7 @@ function stepPreparedChunkLineGeometry(
         return finishLine(pendingBreakSegmentIndex, 0, pendingBreakPaintWidth)
       }
 
-      const softBreakLine = maybeFinishAtSoftHyphen()
+      const softBreakLine = maybeFinishAtSoftHyphen(i)
       if (softBreakLine !== null) return softBreakLine
 
       if (breakAfter && currentBreakFitWidth <= fitLimit) {
@@ -1111,17 +1133,32 @@ function stepPreparedSimpleLineGeometry(
   return lineW
 }
 
-export function stepPreparedLineGeometryFromChunk(
+export function layoutNextLineRange(
   prepared: PreparedLineBreakData,
-  cursor: LineBreakCursor,
-  chunkIndex: number,
+  start: LineBreakCursor,
   maxWidth: number,
-): number | null {
-  if (prepared.simpleLineWalkFastPath) {
-    return stepPreparedSimpleLineGeometry(prepared, cursor, maxWidth)
+): InternalLayoutLine | null {
+  const end: LineBreakCursor = {
+    segmentIndex: start.segmentIndex,
+    graphemeIndex: start.graphemeIndex,
   }
+  const chunkIndex = normalizeLineStartChunkIndex(prepared, end)
+  if (chunkIndex < 0) return null
 
-  return stepPreparedChunkLineGeometry(prepared, cursor, chunkIndex, maxWidth)
+  const lineStartSegmentIndex = end.segmentIndex
+  const lineStartGraphemeIndex = end.graphemeIndex
+  const width = prepared.simpleLineWalkFastPath
+    ? stepPreparedSimpleLineGeometry(prepared, end, maxWidth)
+    : stepPreparedChunkLineGeometry(prepared, end, chunkIndex, maxWidth)
+  if (width === null) return null
+
+  return {
+    startSegmentIndex: lineStartSegmentIndex,
+    startGraphemeIndex: lineStartGraphemeIndex,
+    endSegmentIndex: end.segmentIndex,
+    endGraphemeIndex: end.graphemeIndex,
+    width,
+  }
 }
 
 export function stepPreparedLineGeometry(
@@ -1129,9 +1166,14 @@ export function stepPreparedLineGeometry(
   cursor: LineBreakCursor,
   maxWidth: number,
 ): number | null {
-  const chunkIndex = normalizePreparedLineStart(prepared, cursor)
+  const chunkIndex = normalizeLineStartChunkIndex(prepared, cursor)
   if (chunkIndex < 0) return null
-  return stepPreparedLineGeometryFromChunk(prepared, cursor, chunkIndex, maxWidth)
+
+  if (prepared.simpleLineWalkFastPath) {
+    return stepPreparedSimpleLineGeometry(prepared, cursor, maxWidth)
+  }
+
+  return stepPreparedChunkLineGeometry(prepared, cursor, chunkIndex, maxWidth)
 }
 
 export function measurePreparedLineGeometry(
@@ -1156,7 +1198,7 @@ export function measurePreparedLineGeometry(
   let maxLineWidth = 0
 
   if (!prepared.simpleLineWalkFastPath) {
-    let chunkIndex = normalizePreparedLineStart(prepared, cursor)
+    let chunkIndex = normalizeLineStartChunkIndex(prepared, cursor)
     while (chunkIndex >= 0) {
       const lineWidth = stepPreparedChunkLineGeometry(prepared, cursor, chunkIndex, maxWidth)
       if (lineWidth === null) {

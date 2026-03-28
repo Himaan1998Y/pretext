@@ -58,6 +58,7 @@ import {
   getEngineProfile,
   getFontMeasurementState,
   getSegmentMetrics,
+  getSharedGraphemeSegmenter,
   textMayContainEmoji,
 } from './measurement.js'
 import {
@@ -73,14 +74,9 @@ import {
   getLineTextCache,
 } from './line-text.js'
 
-let sharedGraphemeSegmenter: Intl.Segmenter | null = null
-
-function getSharedGraphemeSegmenter(): Intl.Segmenter {
-  if (sharedGraphemeSegmenter === null) {
-    sharedGraphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
-  }
-  return sharedGraphemeSegmenter
-}
+// Rich-path only. Reuses grapheme splits while materializing multiple lines
+// from the same prepared handle, without pushing that cache into the API.
+let sharedLineTextCaches = new WeakMap<PreparedTextWithSegments, Map<number, string[]>>()
 
 // --- Public types ---
 
@@ -863,7 +859,7 @@ export function layoutWithLines(prepared: PreparedTextWithSegments, maxWidth: nu
 
 export function clearCache(): void {
   clearAnalysisCaches()
-  sharedGraphemeSegmenter = null
+  sharedLineTextCaches = new WeakMap<PreparedTextWithSegments, Map<number, string[]>>()
   clearLineTextCaches()
   clearMeasurementCaches()
 }
