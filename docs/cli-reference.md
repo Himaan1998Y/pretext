@@ -85,11 +85,13 @@ bun run scripts/cli.ts help
 | `1` | Warnings or errors detected |
 | `2` | Critical issues detected |
 | `3` | Invalid arguments |
-| `4` | File I/O error |
+| `4` | File I/O or parsing error |
 
 ---
 
 ## Environment Variables
+
+These variables are reserved for future use and are not yet implemented.
 
 | Variable | Description |
 |----------|-------------|

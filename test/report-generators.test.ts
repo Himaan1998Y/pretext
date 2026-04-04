@@ -164,15 +164,16 @@ describe('Markdown Exporter', () => {
     expect(md).toContain('| Severity |')
   })
 
-  test('escapes pipe characters in text fields', () => {
+  test('escapes pipe characters and backslashes in text fields', () => {
     const withPipe: MeasurementResult[] = [
       {
         ...MOCK_RESULTS[0]!,
-        text: 'a | b',
+        text: 'a | b\\c',
       },
     ]
     const md = exportToMarkdown(withPipe, { groupByLanguage: false })
-    expect(md).toContain('a \\| b')
+    // pipe → \|, backslash → \\
+    expect(md).toContain('a \\| b\\\\c')
   })
 
   test('handles empty results array', () => {

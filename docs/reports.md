@@ -86,7 +86,9 @@ bun run validator validate --language=ar --severity=error --report=markdown
 ### Analyze CJK measurements
 
 ```bash
-bun run validator validate --language=zh,ja,ko --report=html --output=cjk.html
+bun run validator validate --language=zh --report=html --output=zh.html
+bun run validator validate --language=ja --report=html --output=ja.html
+bun run validator validate --language=ko --report=html --output=ko.html
 ```
 
 ## Programmatic Usage

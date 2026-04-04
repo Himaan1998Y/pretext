@@ -78,7 +78,7 @@ export function exportToMarkdown(
       lines.push('| Text | Font | Pretext | DOM | Delta | Severity |')
       lines.push('|------|------|---------|-----|-------|----------|')
       for (const r of rows) {
-        const text = r.text.replace(/\|/g, '\\|')
+        const text = r.text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|')
         lines.push(
           `| ${text} | ${r.font} | ${r.pretextWidth}px | ${r.domWidth}px | ${r.delta.toFixed(2)}px | ${severityIcon(r.overallSeverity)} |`,
         )
@@ -91,7 +91,7 @@ export function exportToMarkdown(
     lines.push('| Text | Font | Pretext | DOM | Delta | Severity |')
     lines.push('|------|------|---------|-----|-------|----------|')
     for (const r of results) {
-      const text = r.text.replace(/\|/g, '\\|')
+      const text = r.text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|')
       lines.push(
         `| ${text} | ${r.font} | ${r.pretextWidth}px | ${r.domWidth}px | ${r.delta.toFixed(2)}px | ${severityIcon(r.overallSeverity)} |`,
       )
