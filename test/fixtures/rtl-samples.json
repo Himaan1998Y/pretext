@@ -1,0 +1,7 @@
+[
+  { "id": "ar-simple", "text": "مرحبا بالعالم", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "ar-paragraph", "text": "هذا نص عربي طويل يتحدث عن أهمية اختبار النصوص", "font": "14px Georgia", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "he-hebrew", "text": "שלום עולם", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "ur-urdu", "text": "السلام علیکم", "font": "14px Arial", "maxWidth": 350, "lineHeight": 18 },
+  { "id": "ar-mixed", "text": "Hello مرحبا world", "font": "14px Arial", "maxWidth": 400, "lineHeight": 18 }
+]
