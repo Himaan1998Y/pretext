@@ -19,6 +19,11 @@
       "import": "./dist/inline-flow.js",
       "default": "./dist/inline-flow.js"
     },
+    "./measurement-validator": {
+      "types": "./dist/measurement-validator.d.ts",
+      "import": "./dist/measurement-validator.js",
+      "default": "./dist/measurement-validator.js"
+    },
     "./demos/*": "./pages/demos/*",
     "./assets/*": "./pages/assets/*",
     "./package.json": "./package.json"
@@ -28,6 +33,7 @@
     "dist",
     "src",
     "!src/layout.test.ts",
+    "!src/measurement-validator.test.ts",
     "!src/test-data.ts",
     "pages/demos",
     "pages/assets"
