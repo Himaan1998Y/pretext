@@ -72,6 +72,9 @@ export function measureLineWidths(container: HTMLElement, lineCount: number): nu
     return lineWidths
   }
 
+  // Note: this simplified implementation returns the container width for every line,
+  // which is sufficient for detecting line-count differences. For per-line width
+  // accuracy, a Range-based approach would be needed.
   const containerWidth = container.offsetWidth
 
   for (let i = 0; i < lineCount; i++) {

@@ -123,7 +123,10 @@ export async function detectFontFallback(sample: MeasurementSample): Promise<Fon
         ? fallbackMetrics.lineWidths.reduce((a, b) => a + b, 0) / fallbackMetrics.lineWidths.length
         : 0
 
-    if (fallbackAvg * 1.1 < specifiedAvg) {
+    // Font fallback is suspected when the specified font renders similarly to the
+    // generic serif fallback (within 10%), suggesting the font was not loaded.
+    const threshold = fallbackAvg * 0.1
+    if (Math.abs(specifiedAvg - fallbackAvg) < threshold) {
       return { detected: true, severity: 'critical', confidence: 0.95 }
     }
 

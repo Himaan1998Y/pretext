@@ -3,6 +3,7 @@
  */
 
 import type { MeasurementSample, MeasurementResult } from './types.js'
+import type { PretextLayoutResult } from './comparator.js'
 import { MeasurementComparator } from './comparator.js'
 import { generateConsoleSummary } from './report-generator.js'
 
@@ -19,9 +20,21 @@ export interface TestSuiteSummary {
   passRate: number
 }
 
+/** Optional callback that provides Pretext layout for a given sample. */
+export type LayoutProvider = (sample: MeasurementSample) => PretextLayoutResult
+
 export class TestSuite {
   private samples: CorpusSample[] = []
   private comparator = new MeasurementComparator()
+  private layoutProvider: LayoutProvider
+
+  /**
+   * @param layoutProvider - Optional function that produces Pretext layout for
+   *   a sample. When omitted all Pretext widths default to 0 (DOM-only mode).
+   */
+  constructor(layoutProvider?: LayoutProvider) {
+    this.layoutProvider = layoutProvider ?? (() => ({}))
+  }
 
   async load(corpusPath: string): Promise<void> {
     const response = await fetch(corpusPath)
@@ -36,7 +49,8 @@ export class TestSuite {
   async run(): Promise<MeasurementResult[]> {
     const results: MeasurementResult[] = []
     for (const sample of this.samples) {
-      const result = await this.comparator.compare(sample, {})
+      const pretextLayout = this.layoutProvider(sample)
+      const result = await this.comparator.compare(sample, pretextLayout)
       results.push(result)
     }
     return results
@@ -56,7 +70,8 @@ export class TestSuite {
     const filtered = this.samples.filter((s) => s.id.startsWith(languageGroup))
     const results: MeasurementResult[] = []
     for (const sample of filtered) {
-      const result = await this.comparator.compare(sample, {})
+      const pretextLayout = this.layoutProvider(sample)
+      const result = await this.comparator.compare(sample, pretextLayout)
       results.push(result)
     }
     return results

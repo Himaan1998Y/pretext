@@ -14,7 +14,7 @@ export {
   generateLanguageBreakdown,
 } from './report-generator.js'
 export { TestSuite } from './test-suite.js'
-export type { CorpusSample, TestSuiteSummary } from './test-suite.js'
+export type { CorpusSample, TestSuiteSummary, LayoutProvider } from './test-suite.js'
 
 export type {
   MeasurementSample,

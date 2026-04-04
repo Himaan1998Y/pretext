@@ -181,7 +181,10 @@ describe('classifyDivergence', () => {
     expect(analysis.recommendation).toBe('No divergence detected')
   })
 
-  test('detects bidi_shaping for Arabic text', async () => {
+  test('detects bidi_shaping or font_fallback for Arabic text', async () => {
+    // In a mocked DOM environment where all fonts return identical measurements,
+    // detectFontFallback fires first (similar widths ≈ font may not be loaded).
+    // Outside mocked environments, bidi_shaping would be the expected root cause.
     const sample: MeasurementSample = { text: 'مرحبا بالعالم', font: '16px Arial', maxWidth: 400 }
     const result: MeasurementResult = {
       sample,
@@ -197,11 +200,12 @@ describe('classifyDivergence', () => {
     }
     const analysis = await classifyDivergence(result, sample)
     expect(analysis.detected).toBe(true)
-    // bidi should be detected before emoji/browser_quirk
     expect(['bidi_shaping', 'font_fallback']).toContain(analysis.rootCause)
   })
 
-  test('detects emoji_rendering for emoji text', async () => {
+  test('detects emoji_rendering or font_fallback for emoji text', async () => {
+    // In a mocked DOM environment, detectFontFallback may fire first.
+    // Outside mocked environments, emoji_rendering would be the expected root cause.
     const sample: MeasurementSample = { text: '😀🎉🌟', font: '16px Arial', maxWidth: 400 }
     const result: MeasurementResult = {
       sample,
