@@ -1,0 +1,72 @@
+[
+  {
+    "id": "mb-001",
+    "description": "English with Arabic phrase",
+    "text": "Hello \u0645\u0631\u062D\u0628\u0627 world",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "mixed-bidi"
+  },
+  {
+    "id": "mb-002",
+    "description": "Arabic with English brand name",
+    "text": "\u0634\u0631\u0643\u0629 Google \u0644\u0644\u062A\u0643\u0646\u0648\u0644\u0648\u062C\u064A\u0627",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "ar",
+    "languageGroup": "mixed-bidi"
+  },
+  {
+    "id": "mb-003",
+    "description": "English sentence ending with Arabic",
+    "text": "The Arabic word for hello is \u0645\u0631\u062D\u0628\u0627.",
+    "font": "16px Arial",
+    "maxWidth": 350,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "mixed-bidi"
+  },
+  {
+    "id": "mb-004",
+    "description": "Hebrew mixed with English numbers",
+    "text": "\u05D4\u05DE\u05D7\u05D9\u05E8 \u05D4\u05D5\u05D0 100 \u05E9\u05E7\u05DC.",
+    "font": "16px Arial",
+    "maxWidth": 250,
+    "lineHeight": 20,
+    "language": "he",
+    "languageGroup": "mixed-bidi"
+  },
+  {
+    "id": "mb-005",
+    "description": "Mixed bidi paragraph",
+    "text": "This is English. \u0647\u0630\u0627 \u0647\u0648 \u0639\u0631\u0628\u064A. And back to English again.",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "mixed-bidi"
+  },
+  {
+    "id": "mb-006",
+    "description": "Arabic URL in English text",
+    "text": "Visit \u0645\u0648\u0642\u0639\u0646\u0627.com for info.",
+    "font": "16px Arial",
+    "maxWidth": 250,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "mixed-bidi"
+  },
+  {
+    "id": "mb-007",
+    "description": "Mixed bidi at narrow width forcing wrap",
+    "text": "English \u0639\u0631\u0628\u064A English \u0639\u0631\u0628\u064A English \u0639\u0631\u0628\u064A",
+    "font": "16px Arial",
+    "maxWidth": 120,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "mixed-bidi"
+  }
+]

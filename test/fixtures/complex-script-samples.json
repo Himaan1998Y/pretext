@@ -1,0 +1,72 @@
+[
+  {
+    "id": "th-001",
+    "description": "Short Thai phrase",
+    "text": "\u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35\u0e0a\u0e32\u0e27\u0e42\u0e25\u0e01",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "th",
+    "languageGroup": "complex-script"
+  },
+  {
+    "id": "th-002",
+    "description": "Thai sentence without spaces (cluster-based breaking)",
+    "text": "\u0e20\u0e32\u0e29\u0e32\u0e44\u0e17\u0e22\u0e44\u0e21\u0e48\u0e43\u0e0a\u0e49\u0e0a\u0e48\u0e2d\u0e07\u0e27\u0e48\u0e32\u0e07\u0e43\u0e19\u0e01\u0e32\u0e23\u0e41\u0e1a\u0e48\u0e07\u0e04\u0e33",
+    "font": "16px Arial",
+    "maxWidth": 150,
+    "lineHeight": 20,
+    "language": "th",
+    "languageGroup": "complex-script"
+  },
+  {
+    "id": "th-003",
+    "description": "Thai mixed with English",
+    "text": "Pretext \u0e23\u0e2d\u0e07\u0e23\u0e31\u0e1a\u0e20\u0e32\u0e29\u0e32\u0e44\u0e17\u0e22",
+    "font": "16px Arial",
+    "maxWidth": 250,
+    "lineHeight": 20,
+    "language": "th",
+    "languageGroup": "complex-script"
+  },
+  {
+    "id": "my-001",
+    "description": "Short Myanmar phrase",
+    "text": "\u1019\u103c\u1014\u103a\u1019\u102c \u1001\u103b\u1031\u102c\u1000\u103a\u1019\u103a\u102e\u1038",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "my",
+    "languageGroup": "complex-script"
+  },
+  {
+    "id": "my-002",
+    "description": "Myanmar sentence",
+    "text": "\u1019\u103c\u1014\u103a\u1019\u102c\u1005\u102c \u1005\u102c\u1015\u102d\u102f\u1038\u1021\u1004\u103a\u1038 \u1015\u102c\u1016\u102c\u101e\u102c \u1014\u100a\u103a\u102c\u101e\u1031\u102c\u101c\u103b\u103e\u1021\u1015\u103a\u101e\u100a\u103a\u104b",
+    "font": "16px Arial",
+    "maxWidth": 200,
+    "lineHeight": 20,
+    "language": "my",
+    "languageGroup": "complex-script"
+  },
+  {
+    "id": "km-001",
+    "description": "Short Khmer phrase",
+    "text": "\u179f\u17bd\u1780\u179f\u17d0\u178f\u17b7\u1780\u179b\u17c4\u1780",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "km",
+    "languageGroup": "complex-script"
+  },
+  {
+    "id": "km-002",
+    "description": "Khmer sentence",
+    "text": "\u17a2\u1780\u17d2\u179f\u179a\u1780\u1798\u17d2\u179b\u17b6\u1780\u17d2\u179a\u1795\u17d2\u179f\u17bd\u179b\u1790\u17b6\u1780 \u1780\u17b6\u179a\u179a\u1780\u17d2\u179f\u17b6\u1780\u179a\u1794\u179f\u17cb\u179a\u1794\u179f\u1780\u17d0\u179a\u1793\u17d0\u1780\u17d2\u179f\u179a \u1781\u17d2\u179c\u17c4\u1793\u200b\u1793\u1787\u17d0\u1799\u200b\u178a\u17c2\u1793\u1780\u17b6\u179a\u200b\u1780\u1784\u17d0\u179a\u200b\u178a\u17d2\u178a\u1781\u17d2\u179c\u17c2\u1793\u200b\u1798\u17d2\u178f\u17c2\u178f",
+    "font": "16px Arial",
+    "maxWidth": 200,
+    "lineHeight": 20,
+    "language": "km",
+    "languageGroup": "complex-script"
+  }
+]
