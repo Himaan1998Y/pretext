@@ -127,6 +127,15 @@ export async function compareAll(samples: MeasurementSample[]): Promise<Comparis
 }
 
 // Very lightweight root-cause heuristics — kept intentionally narrow for Phase 1.
+
+// Characters in RTL scripts: Hebrew (U+0590–U+05FF), Arabic (U+0600–U+06FF),
+// Arabic Supplement (U+0750–U+077F), Arabic Extended-A/B (U+08A0–U+08FF),
+// Arabic Presentation Forms-A (U+FB1D–U+FB4F).
+const RTL_CHAR_RE = /[\u0590-\u08FF\uFB1D-\uFB4F]/
+
+// Emoji glyphs that render as pictures (as opposed to text presentation).
+const EMOJI_PRESENTATION_RE = /\p{Emoji_Presentation}/u
+
 function detectRootCause(
   metrics: DivergenceMetrics,
   sample: MeasurementSample,
@@ -135,14 +144,14 @@ function detectRootCause(
   if (metrics.severity === 'exact') return undefined
 
   // Bidi / RTL text.
-  if (sample.direction === 'rtl' || /[\u0590-\u08FF\uFB1D-\uFB4F]/.test(sample.text)) {
+  if (sample.direction === 'rtl' || RTL_CHAR_RE.test(sample.text)) {
     if (metrics.severity === 'major' || metrics.severity === 'critical') {
       return 'Possible bidi/RTL shaping divergence: RTL characters detected with significant delta'
     }
   }
 
   // Emoji.
-  if (/\p{Emoji_Presentation}/u.test(sample.text)) {
+  if (EMOJI_PRESENTATION_RE.test(sample.text)) {
     return 'Possible emoji correction divergence: emoji glyphs detected'
   }
 
