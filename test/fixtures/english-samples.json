@@ -1,0 +1,86 @@
+{
+  "description": "English-language test samples for the Measurement Validator Phase 1 corpus.",
+  "samples": [
+    {
+      "id": "en-short-word",
+      "label": "Short English word",
+      "text": "Hello",
+      "font": "16px Arial",
+      "maxWidth": 300,
+      "lineHeight": 20
+    },
+    {
+      "id": "en-short-sentence",
+      "label": "Short English sentence",
+      "text": "Hello, world!",
+      "font": "16px Arial",
+      "maxWidth": 300,
+      "lineHeight": 20
+    },
+    {
+      "id": "en-wrapping-sentence",
+      "label": "Sentence that wraps at narrow width",
+      "text": "The quick brown fox jumps over the lazy dog.",
+      "font": "16px Arial",
+      "maxWidth": 200,
+      "lineHeight": 20
+    },
+    {
+      "id": "en-long-paragraph",
+      "label": "Multi-line paragraph",
+      "text": "Text measurement is a fundamental challenge in web rendering. Accurate measurement enables pixel-perfect layouts without constant DOM reflow.",
+      "font": "16px Arial",
+      "maxWidth": 300,
+      "lineHeight": 20
+    },
+    {
+      "id": "en-narrow-container",
+      "label": "Narrow container forces many wraps",
+      "text": "Each word on its own line when the container is narrow enough.",
+      "font": "16px Arial",
+      "maxWidth": 80,
+      "lineHeight": 20
+    },
+    {
+      "id": "en-large-font",
+      "label": "Large font size",
+      "text": "Big text",
+      "font": "32px Arial",
+      "maxWidth": 300,
+      "lineHeight": 40
+    },
+    {
+      "id": "en-small-font",
+      "label": "Small font size",
+      "text": "Small text fits more words per line",
+      "font": "12px Arial",
+      "maxWidth": 200,
+      "lineHeight": 16
+    },
+    {
+      "id": "en-numbers-punctuation",
+      "label": "Numbers and punctuation",
+      "text": "Version 3.14.159 released on 2024-01-15.",
+      "font": "16px Arial",
+      "maxWidth": 300,
+      "lineHeight": 20
+    },
+    {
+      "id": "en-pre-wrap-newlines",
+      "label": "Hard line breaks in pre-wrap mode",
+      "text": "Line one\nLine two\nLine three",
+      "font": "16px Arial",
+      "maxWidth": 300,
+      "lineHeight": 20,
+      "whiteSpace": "pre-wrap"
+    },
+    {
+      "id": "en-long-word",
+      "label": "Word longer than container (forced grapheme break)",
+      "text": "supercalifragilisticexpialidocious",
+      "font": "16px Arial",
+      "maxWidth": 100,
+      "lineHeight": 20
+    }
+  ]
+}
