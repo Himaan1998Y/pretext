@@ -33,3 +33,11 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# measurement-validator runtime files
+.measurement-results.db
+.measurement-results.db-shm
+.measurement-results.db-wal
+
+# npm lockfile (project uses bun.lock)
+package-lock.json

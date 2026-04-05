@@ -1,0 +1,95 @@
+name: Measurement Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: TypeScript type-check
+        run: bun run check
+
+      - name: Run unit tests
+        run: bun test src/layout.test.ts
+
+      - name: Performance trends (chrome)
+        run: bun run validator:trends --browser=chrome --json > /tmp/perf-chrome.json || true
+
+      - name: Regression detection
+        id: regression
+        run: |
+          bun run validator:regression-detect --json > /tmp/regressions.json 2>&1 || true
+          cat /tmp/regressions.json
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: measurement-validation-results
+          path: |
+            /tmp/perf-chrome.json
+            /tmp/regressions.json
+          if-no-files-found: warn
+
+      - name: Post PR summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            let perfSummary = '_(no data)_'
+            let regressionSummary = '_(no data)_'
+
+            try {
+              const perf = JSON.parse(fs.readFileSync('/tmp/perf-chrome.json', 'utf-8'))
+              const degraded = (perf.metrics || []).filter(m => m.trend === 'degrading')
+              perfSummary = degraded.length === 0
+                ? '✅ All benchmarks within expected range'
+                : `⚠️ ${degraded.length} degraded benchmark(s)`
+            } catch {}
+
+            try {
+              const reg = JSON.parse(fs.readFileSync('/tmp/regressions.json', 'utf-8'))
+              const total =
+                (reg.accuracyRegressions || []).length +
+                (reg.performanceRegressions || []).length
+              regressionSummary = reg.hasBlocker
+                ? `❌ Critical regression(s) detected — ${total} issue(s)`
+                : total > 0
+                  ? `⚠️ ${total} regression(s) detected`
+                  : '✅ No regressions detected'
+            } catch {}
+
+            const body = [
+              '## 📊 Measurement Validator Results',
+              '',
+              `**Performance (Chrome):** ${perfSummary}`,
+              `**Regressions:** ${regressionSummary}`,
+              '',
+              `_Workflow run: [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})_`,
+            ].join('\n')
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            })
