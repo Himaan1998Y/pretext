@@ -102,7 +102,9 @@ export function buildSummary(
   results: MeasurementResult[],
   durationMs: number
 ): ValidationSummary {
-  let passed = 0, warnings = 0, criticals = 0
+  let passed = 0
+  let warnings = 0
+  let criticals = 0
   for (const r of results) {
     if (r.severity === 'pass') passed++
     else if (r.severity === 'warning') warnings++
