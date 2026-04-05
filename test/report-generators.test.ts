@@ -291,6 +291,12 @@ describe('exportMarkdown', () => {
     expect(md).toContain('a\\|b\\|c')
   })
 
+  test('escapes backslash chars before pipes', () => {
+    const result = makeResult({ text: 'path\\to|file' })
+    const md = exportMarkdown([result])
+    expect(md).toContain('path\\\\to\\|file')
+  })
+
   test('exports empty array gracefully', () => {
     const md = exportMarkdown([])
     expect(md).toContain('# Measurement Validator Report')

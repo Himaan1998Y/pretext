@@ -31,9 +31,12 @@ const LANGUAGE_LABELS: Record<string, string> = {
   unknown: 'Unknown',
 }
 
-/** Escape Markdown pipe characters inside table cells. */
+/** Escape special Markdown characters inside table cells. */
 function mdCell(value: string): string {
-  return value.replace(/\|/g, '\\|').replace(/\r\n|\r|\n/g, ' ')
+  return value
+    .replace(/\\/g, '\\\\') // escape backslashes first to avoid double-escaping
+    .replace(/\|/g, '\\|') // then escape pipes
+    .replace(/\r\n|\r|\n/g, ' ')
 }
 
 /** Format a number with up to 2 decimal places, stripping trailing zeros. */
