@@ -1,0 +1,52 @@
+[
+  {
+    "id": "ar-01",
+    "text": "مرحبا بالعالم",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 95.2,
+    "domWidth": 110.5,
+    "language": "arabic"
+  },
+  {
+    "id": "ar-02",
+    "text": "النص العربي",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 88.0,
+    "domWidth": 102.0,
+    "language": "arabic"
+  },
+  {
+    "id": "he-01",
+    "text": "שלום עולם",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 78.0,
+    "domWidth": 80.0,
+    "language": "hebrew"
+  },
+  {
+    "id": "ur-01",
+    "text": "دنیا میں خوش آمدید",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 110.0,
+    "domWidth": 128.0,
+    "language": "urdu"
+  },
+  {
+    "id": "ar-crit-01",
+    "text": "قصيدة في مديح العلم والمعرفة",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 180.0,
+    "domWidth": 220.0,
+    "language": "arabic"
+  }
+]

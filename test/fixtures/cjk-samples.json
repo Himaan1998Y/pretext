@@ -1,0 +1,52 @@
+[
+  {
+    "id": "zh-01",
+    "text": "你好世界",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 64.0,
+    "domWidth": 70.0,
+    "language": "chinese"
+  },
+  {
+    "id": "ja-01",
+    "text": "こんにちは",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 80.0,
+    "domWidth": 80.5,
+    "language": "japanese"
+  },
+  {
+    "id": "ko-01",
+    "text": "안녕하세요",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 72.0,
+    "domWidth": 72.0,
+    "language": "korean"
+  },
+  {
+    "id": "zh-02",
+    "text": "中文文本排版测试",
+    "font": "Arial",
+    "fontSize": 18,
+    "containerWidth": 500,
+    "pretextWidth": 144.0,
+    "domWidth": 153.0,
+    "language": "chinese"
+  },
+  {
+    "id": "ja-02",
+    "text": "日本語テキスト",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 112.0,
+    "domWidth": 112.5,
+    "language": "japanese"
+  }
+]
