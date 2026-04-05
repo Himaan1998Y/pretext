@@ -453,7 +453,13 @@ describe('ReportFormatter', () => {
       const fmt = new ReportFormatter(SAMPLE_RESULTS).sortByDelta()
       const deltas = fmt.data.map((r) => Math.abs(r.delta))
       for (let i = 1; i < deltas.length; i++) {
-        expect(deltas[i - 1]).toBeGreaterThanOrEqual(deltas[i] ?? 0)
+        const prev = deltas[i - 1]
+        const curr = deltas[i]
+        expect(prev).toBeDefined()
+        expect(curr).toBeDefined()
+        if (prev !== undefined && curr !== undefined) {
+          expect(prev).toBeGreaterThanOrEqual(curr)
+        }
       }
     })
 
@@ -461,7 +467,13 @@ describe('ReportFormatter', () => {
       const fmt = new ReportFormatter(SAMPLE_RESULTS).sortByDelta(true)
       const deltas = fmt.data.map((r) => Math.abs(r.delta))
       for (let i = 1; i < deltas.length; i++) {
-        expect(deltas[i - 1]).toBeLessThanOrEqual(deltas[i] ?? Infinity)
+        const prev = deltas[i - 1]
+        const curr = deltas[i]
+        expect(prev).toBeDefined()
+        expect(curr).toBeDefined()
+        if (prev !== undefined && curr !== undefined) {
+          expect(prev).toBeLessThanOrEqual(curr)
+        }
       }
     })
   })

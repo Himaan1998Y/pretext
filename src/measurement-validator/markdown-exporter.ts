@@ -34,7 +34,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
 /** Escape special Markdown characters inside table cells. */
 function mdCell(value: string): string {
   return value
-    .replace(/\\/g, '\\\\') // escape backslashes first to avoid double-escaping
+    .replace(/\\/g, '\\\\') // escape backslashes before pipes to prevent double-escaping of pipe characters
     .replace(/\|/g, '\\|') // then escape pipes
     .replace(/\r\n|\r|\n/g, ' ')
 }
