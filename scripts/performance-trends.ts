@@ -55,18 +55,25 @@ const BASELINE_PATH = (args['baseline'] as string) ?? '.measurement-baseline.jso
 const LANGUAGES = ['english', 'arabic', 'chinese', 'japanese', 'thai']
 const FONT = '16px Inter, sans-serif'
 
+// Synthetic timing ranges derived from observed pretext benchmark medians.
+// prepare() typically runs 0.8–1.2ms; layout() typically runs 0.02–0.04ms.
+// Replace with real canvas timing when integrating with browser automation.
+const SIM_SAMPLE_COUNT = 20
+const SIM_PREPARE_BASE_MS = 0.8
+const SIM_PREPARE_JITTER_MS = 0.4
+const SIM_LAYOUT_BASE_MS = 0.02
+const SIM_LAYOUT_JITTER_MS = 0.02
+
 /**
- * Simulate performance measurement for a language/font pair.
- * In a real environment, this would invoke the actual pretext prepare()/layout() APIs
- * with representative test text under proper timing.
+ * Synthetic performance measurement stub for a language/font pair.
+ * In a real integration, replace this with actual pretext prepare()/layout()
+ * calls driven by representative test text under high-resolution timing.
  */
 function measurePerformance(language: string, font: string): PerformanceMetrics {
   const session: TrackingSession = createTrackingSession(language, font)
-  // Simulate 20 timing samples
-  for (let i = 0; i < 20; i++) {
-    // Synthetic timing values that would come from real measurements
-    const prepareMs = 0.8 + Math.random() * 0.4
-    const layoutMs = 0.02 + Math.random() * 0.02
+  for (let i = 0; i < SIM_SAMPLE_COUNT; i++) {
+    const prepareMs = SIM_PREPARE_BASE_MS + Math.random() * SIM_PREPARE_JITTER_MS
+    const layoutMs = SIM_LAYOUT_BASE_MS + Math.random() * SIM_LAYOUT_JITTER_MS
     recordSample(session, prepareMs, layoutMs)
   }
   const n = session.samples.length
@@ -98,8 +105,12 @@ async function main() {
   const entriesByKey: Record<string, ReturnType<typeof buildBaselineEntry>> = {}
   for (const lang of LANGUAGES) {
     const session: TrackingSession = createTrackingSession(lang, FONT)
-    for (let i = 0; i < 20; i++) {
-      recordSample(session, 0.8 + Math.random() * 0.4, 0.02 + Math.random() * 0.02)
+    for (let i = 0; i < SIM_SAMPLE_COUNT; i++) {
+      recordSample(
+        session,
+        SIM_PREPARE_BASE_MS + Math.random() * SIM_PREPARE_JITTER_MS,
+        SIM_LAYOUT_BASE_MS + Math.random() * SIM_LAYOUT_JITTER_MS,
+      )
     }
     entriesByKey[baselineKey(lang, FONT)] = buildBaselineEntry(session)
   }

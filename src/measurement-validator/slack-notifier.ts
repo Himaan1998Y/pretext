@@ -241,11 +241,18 @@ export class SlackNotifier {
 export function createSlackNotifierFromEnv(): SlackNotifier | null {
   const url = process.env['SLACK_WEBHOOK_URL']
   if (!url) return null
+
+  const rawSeverity = process.env['SLACK_MIN_SEVERITY']
+  const minSeverity: 'ok' | 'warning' | 'critical' =
+    rawSeverity === 'ok' || rawSeverity === 'warning' || rawSeverity === 'critical'
+      ? rawSeverity
+      : 'warning'
+
   return new SlackNotifier({
     webhookUrl: url,
     channel: process.env['SLACK_CHANNEL'],
     username: process.env['SLACK_USERNAME'] ?? 'pretext-validator',
     iconEmoji: process.env['SLACK_ICON_EMOJI'] ?? ':bar_chart:',
-    minSeverity: (process.env['SLACK_MIN_SEVERITY'] as 'ok' | 'warning' | 'critical') ?? 'warning',
+    minSeverity,
   })
 }

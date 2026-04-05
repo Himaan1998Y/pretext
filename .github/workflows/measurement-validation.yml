@@ -27,6 +27,9 @@ on:
         required: false
         default: "true"
 
+permissions:
+  contents: read
+
 env:
   BUN_VERSION: "1.x"
   BASELINE_PATH: ".measurement-baseline.json"
@@ -36,6 +39,9 @@ jobs:
     name: Measurement Validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout

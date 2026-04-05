@@ -217,7 +217,7 @@ export class DashboardServer {
           const limit = url.searchParams.get('limit')
           const offset = url.searchParams.get('offset')
           if (lang) opts.language = lang
-          if (sev) opts.severity = sev as DatabaseQueryOptions['severity']
+          if (sev === 'ok' || sev === 'warning' || sev === 'critical') opts.severity = sev
           if (since) opts.since = Number(since)
           if (limit) opts.limit = Number(limit)
           if (offset) opts.offset = Number(offset)

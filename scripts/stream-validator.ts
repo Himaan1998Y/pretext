@@ -38,6 +38,14 @@ const LANGUAGES = args['language'] ? [args['language'] as string] : ['english', 
 const FONT = '16px Inter, sans-serif'
 const FORMAT = (args['format'] as string) ?? 'text'
 
+// Synthetic timing ranges derived from observed pretext benchmark medians.
+// Replace with real canvas timing when integrating with browser automation.
+const SIM_SAMPLE_COUNT = 20
+const SIM_PREPARE_BASE_MS = 0.8
+const SIM_PREPARE_JITTER_MS = 0.4
+const SIM_LAYOUT_BASE_MS = 0.02
+const SIM_LAYOUT_JITTER_MS = 0.02
+
 function emit(data: unknown) {
   if (FORMAT === 'ndjson') {
     console.log(JSON.stringify(data))
@@ -73,8 +81,12 @@ async function main() {
 
   for (const lang of LANGUAGES) {
     const session = createTrackingSession(lang, FONT)
-    for (let i = 0; i < 20; i++) {
-      recordSample(session, 0.8 + Math.random() * 0.4, 0.02 + Math.random() * 0.02)
+    for (let i = 0; i < SIM_SAMPLE_COUNT; i++) {
+      recordSample(
+        session,
+        SIM_PREPARE_BASE_MS + Math.random() * SIM_PREPARE_JITTER_MS,
+        SIM_LAYOUT_BASE_MS + Math.random() * SIM_LAYOUT_JITTER_MS,
+      )
     }
     const metrics = finalizeSession(session)
     current.push(metrics)
