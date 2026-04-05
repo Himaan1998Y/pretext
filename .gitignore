@@ -33,3 +33,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# measurement-validator runtime artifacts (do not commit)
+.measurement-results.db
+.perf-report.json

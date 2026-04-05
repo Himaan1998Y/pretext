@@ -1,0 +1,58 @@
+{
+  "version": "1",
+  "createdAt": 1743849600000,
+  "updatedAt": 1743849600000,
+  "commitSha": null,
+  "metrics": {
+    "english::16px Inter, sans-serif": {
+      "avgPrepareMs": 0.85,
+      "avgLayoutMs": 0.02,
+      "avgTotalMs": 0.87,
+      "p95PrepareMs": 1.20,
+      "p95LayoutMs": 0.04,
+      "p95TotalMs": 1.24,
+      "sampleCount": 100,
+      "capturedAt": 1743849600000
+    },
+    "arabic::16px Inter, sans-serif": {
+      "avgPrepareMs": 1.10,
+      "avgLayoutMs": 0.02,
+      "avgTotalMs": 1.12,
+      "p95PrepareMs": 1.60,
+      "p95LayoutMs": 0.04,
+      "p95TotalMs": 1.64,
+      "sampleCount": 100,
+      "capturedAt": 1743849600000
+    },
+    "chinese::16px Inter, sans-serif": {
+      "avgPrepareMs": 0.95,
+      "avgLayoutMs": 0.02,
+      "avgTotalMs": 0.97,
+      "p95PrepareMs": 1.35,
+      "p95LayoutMs": 0.04,
+      "p95TotalMs": 1.39,
+      "sampleCount": 100,
+      "capturedAt": 1743849600000
+    },
+    "japanese::16px Inter, sans-serif": {
+      "avgPrepareMs": 0.90,
+      "avgLayoutMs": 0.02,
+      "avgTotalMs": 0.92,
+      "p95PrepareMs": 1.30,
+      "p95LayoutMs": 0.04,
+      "p95TotalMs": 1.34,
+      "sampleCount": 100,
+      "capturedAt": 1743849600000
+    },
+    "thai::16px Inter, sans-serif": {
+      "avgPrepareMs": 1.05,
+      "avgLayoutMs": 0.02,
+      "avgTotalMs": 1.07,
+      "p95PrepareMs": 1.50,
+      "p95LayoutMs": 0.04,
+      "p95TotalMs": 1.54,
+      "sampleCount": 100,
+      "capturedAt": 1743849600000
+    }
+  }
+}

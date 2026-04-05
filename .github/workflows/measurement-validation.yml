@@ -1,0 +1,185 @@
+name: Measurement Validation
+
+on:
+  push:
+    branches: ["main", "release/*"]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - ".measurement-baseline.json"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - ".measurement-baseline.json"
+  schedule:
+    # Daily canary run at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      update_baseline:
+        description: "Update the performance baseline after this run"
+        required: false
+        default: "false"
+      slack_notify:
+        description: "Send Slack notification on completion"
+        required: false
+        default: "true"
+
+env:
+  BUN_VERSION: "1.x"
+  BASELINE_PATH: ".measurement-baseline.json"
+
+jobs:
+  validate:
+    name: Measurement Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type-check
+        run: bun run check
+
+      - name: Run unit tests
+        run: bun test src/measurement-validator/
+
+      - name: Run performance tracking check
+        id: perf
+        run: |
+          bun run scripts/performance-trends.ts \
+            --baseline=${{ env.BASELINE_PATH }} \
+            --output=.perf-report.json \
+            --format=json
+        continue-on-error: true
+
+      - name: Upload performance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report-${{ github.run_id }}
+          path: .perf-report.json
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = '## 📊 Measurement Validation Report\n\n';
+
+            try {
+              const raw = fs.readFileSync('.perf-report.json', 'utf8');
+              const data = JSON.parse(raw);
+
+              if (data.regressions && data.regressions.length > 0) {
+                const critical = data.regressions.filter(r => r.severity === 'critical');
+                const warnings = data.regressions.filter(r => r.severity === 'warning');
+                if (critical.length > 0) {
+                  report += '### 🔴 Critical Regressions\n';
+                  critical.forEach(r => {
+                    report += `- **${r.language}** (${r.metric}): ${r.baselineMs.toFixed(2)}ms → ${r.currentMs.toFixed(2)}ms (+${r.changePercent.toFixed(1)}%)\n`;
+                  });
+                  report += '\n';
+                }
+                if (warnings.length > 0) {
+                  report += '### 🟡 Warnings\n';
+                  warnings.forEach(r => {
+                    report += `- **${r.language}** (${r.metric}): ${r.baselineMs.toFixed(2)}ms → ${r.currentMs.toFixed(2)}ms (+${r.changePercent.toFixed(1)}%)\n`;
+                  });
+                  report += '\n';
+                }
+              } else {
+                report += '✅ No performance regressions detected.\n\n';
+              }
+
+              if (data.metrics) {
+                report += '### Current Metrics\n';
+                report += '| Language | Avg Total | p95 Total | Samples |\n';
+                report += '|----------|-----------|-----------|----------|\n';
+                for (const [key, m] of Object.entries(data.metrics)) {
+                  const [lang] = key.split('::');
+                  report += `| ${lang} | ${m.avgTotalMs.toFixed(2)}ms | ${m.p95TotalMs.toFixed(2)}ms | ${m.sampleCount} |\n`;
+                }
+              }
+            } catch (e) {
+              report += `> Performance report not available: ${e.message}\n`;
+            }
+
+            report += `\n---\n*Run ID: \`${context.runId}\` · Commit: \`${context.sha.slice(0, 8)}\`*`;
+
+            // Find or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('Measurement Validation Report')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: report,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: report,
+              });
+            }
+
+      - name: Fail on critical regressions
+        if: steps.perf.outcome == 'failure'
+        run: |
+          echo "::error::Performance regressions detected. See the performance report artifact for details."
+          exit 1
+
+      - name: Update baseline (manual trigger only)
+        if: |
+          github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.update_baseline == 'true' &&
+          steps.perf.outcome != 'failure'
+        run: |
+          bun run scripts/performance-trends.ts \
+            --update-baseline \
+            --baseline=${{ env.BASELINE_PATH }}
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ${{ env.BASELINE_PATH }}
+          git commit -m "chore: update measurement performance baseline [skip ci]" || true
+          git push
+
+      - name: Send Slack notification
+        if: |
+          (github.event_name == 'schedule' || github.event.inputs.slack_notify == 'true') &&
+          env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          bun run scripts/performance-trends.ts \
+            --slack-notify \
+            --baseline=${{ env.BASELINE_PATH }} \
+            --branch="${{ github.ref_name }}" \
+            --commit="${{ github.sha }}"
