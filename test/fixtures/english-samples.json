@@ -1,0 +1,52 @@
+[
+  {
+    "id": "en-simple-01",
+    "text": "Hello world",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 87.5,
+    "domWidth": 88.0,
+    "language": "english"
+  },
+  {
+    "id": "en-simple-02",
+    "text": "The quick brown fox",
+    "font": "Arial",
+    "fontSize": 16,
+    "containerWidth": 400,
+    "pretextWidth": 152.0,
+    "domWidth": 152.5,
+    "language": "english"
+  },
+  {
+    "id": "en-simple-03",
+    "text": "Typography matters",
+    "font": "Helvetica",
+    "fontSize": 14,
+    "containerWidth": 300,
+    "pretextWidth": 142.0,
+    "domWidth": 143.0,
+    "language": "english"
+  },
+  {
+    "id": "en-warn-01",
+    "text": "Canvas measurement divergence",
+    "font": "Arial",
+    "fontSize": 18,
+    "containerWidth": 500,
+    "pretextWidth": 248.0,
+    "domWidth": 251.5,
+    "language": "english"
+  },
+  {
+    "id": "en-error-01",
+    "text": "Significant measurement error example",
+    "font": "system-ui",
+    "fontSize": 16,
+    "containerWidth": 500,
+    "pretextWidth": 290.0,
+    "domWidth": 305.0,
+    "language": "english"
+  }
+]
