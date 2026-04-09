@@ -205,6 +205,32 @@ function getTerminalLetterSpacing(
 ): number {
   if (prepared.letterSpacing === 0) return 0
 
+  if (endGraphemeIndex > 0) {
+    return prepared.spacingGraphemeCounts[endSegmentIndex]! > 0
+      ? prepared.letterSpacing
+      : 0
+  }
+
+  for (let i = endSegmentIndex - 1; i >= startSegmentIndex; i--) {
+    const kind = prepared.kinds[i]!
+    if (kind === 'space' || kind === 'zero-width-break' || kind === 'hard-break') continue
+    if (kind === 'soft-hyphen') {
+      if (i === endSegmentIndex - 1) return 0
+      continue
+    }
+
+    if (i === startSegmentIndex && startGraphemeIndex > 0) {
+      return prepared.letterSpacing
+    }
+
+    return prepared.spacingGraphemeCounts[i]! > 0
+      ? prepared.letterSpacing
+      : 0
+  }
+
+  return 0
+}
+
 function findChunkIndexForStart(prepared: PreparedLineBreakData, segmentIndex: number): number {
   if (prepared.chunkBySegment !== null && segmentIndex >= 0 && segmentIndex < prepared.chunkBySegment.length) {
     const c = prepared.chunkBySegment[segmentIndex]!
