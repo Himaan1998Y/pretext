@@ -98,6 +98,7 @@ export function setAnalysisLocale(locale?: string): void {
 
 const arabicScriptRe = /\p{Script=Arabic}/u
 const combiningMarkRe = /\p{M}/u
+const currencySymbolRe = /\p{Sc}/u
 const decimalDigitRe = /\p{Nd}/u
 
 function containsArabicScript(text: string): boolean {
@@ -167,6 +168,7 @@ const keepAllDashBreakChars = new Set([
   '\u2014',
 ])
 
+
 function endsWithKeepAllGlueText(text: string): boolean {
   const last = getLastCodePoint(text)
   return last !== null && keepAllGlueChars.has(last)
@@ -217,9 +219,7 @@ export const kinsokuStart = new Set([
 export const kinsokuEnd = new Set([
   '"',
   '(', '[', '{',
-  '¡', '¿',
-  '“', '‘', '‚', '„', '«', '‹',
-  '\u2E18',
+  '“', '‘', '«', '‹', '‚', '„',
   '\uFF08',
   '\u3014',
   '\u3008',
@@ -281,7 +281,7 @@ function isLeftStickyPunctuationSegment(segment: string): boolean {
   if (isEscapedQuoteClusterSegment(segment)) return true
   let sawPunctuation = false
   for (const ch of segment) {
-    if (leftStickyPunctuation.has(ch) || isLineBreakNumericAffix(ch)) {
+    if (leftStickyPunctuation.has(ch) || currencySymbolRe.test(ch)) {
       sawPunctuation = true
       continue
     }
@@ -301,14 +301,7 @@ function isCJKLineStartProhibitedSegment(segment: string): boolean {
 function isForwardStickyClusterSegment(segment: string): boolean {
   if (isEscapedQuoteClusterSegment(segment)) return true
   for (const ch of segment) {
-    if (
-      !kinsokuEnd.has(ch) &&
-      !forwardStickyGlue.has(ch) &&
-      !combiningMarkRe.test(ch) &&
-      !isLineBreakNumericAffix(ch)
-    ) {
-      return false
-    }
+    if (!kinsokuEnd.has(ch) && !forwardStickyGlue.has(ch) && !combiningMarkRe.test(ch) && !currencySymbolRe.test(ch)) return false
   }
   return segment.length > 0
 }
@@ -344,56 +337,6 @@ function getLastCodePoint(text: string): string | null {
   if (text.length === 0) return null
   const start = previousCodePointStart(text, text.length)
   return text.slice(start)
-}
-
-function getFirstSignificantCodePoint(text: string): string | null {
-  for (const ch of text) {
-    if (!combiningMarkRe.test(ch)) return ch
-  }
-  return null
-}
-
-function getLastSignificantCodePoint(text: string): string | null {
-  for (let end = text.length; end > 0;) {
-    const start = previousCodePointStart(text, end)
-    const ch = text.slice(start, end)
-    if (!combiningMarkRe.test(ch)) return ch
-    end = start
-  }
-  return null
-}
-
-// Unicode line-break PR/PO classes from UAX #14, stored as start/end pairs.
-const lineBreakNumericAffixRanges = [
-  0x0024, 0x0025, 0x002B, 0x002B, 0x005C, 0x005C, 0x00A2, 0x00A5, 0x00B0, 0x00B1,
-  0x058F, 0x058F, 0x0609, 0x060B, 0x066A, 0x066A, 0x07FE, 0x07FF, 0x09F2, 0x09F3,
-  0x09F9, 0x09FB, 0x0AF1, 0x0AF1, 0x0BF9, 0x0BF9, 0x0D79, 0x0D79, 0x0E3F, 0x0E3F,
-  0x17DB, 0x17DB, 0x2030, 0x2037, 0x2057, 0x2057, 0x20A0, 0x20CF, 0x2103, 0x2103,
-  0x2109, 0x2109, 0x2116, 0x2116, 0x2212, 0x2213, 0xA838, 0xA838, 0xFDFC, 0xFDFC,
-  0xFE69, 0xFE6A, 0xFF04, 0xFF05, 0xFFE0, 0xFFE1, 0xFFE5, 0xFFE6,
-  0x11FDD, 0x11FE0, 0x1E2FF, 0x1E2FF, 0x1ECAC, 0x1ECAC, 0x1ECB0, 0x1ECB0,
-] as const
-
-function isCodePointInRanges(codePoint: number, ranges: readonly number[]): boolean {
-  for (let i = 0; i < ranges.length; i += 2) {
-    if (codePoint >= ranges[i]! && codePoint <= ranges[i + 1]!) return true
-  }
-  return false
-}
-
-function isLineBreakNumericAffix(ch: string): boolean {
-  const codePoint = ch.codePointAt(0)
-  return codePoint !== undefined && isCodePointInRanges(codePoint, lineBreakNumericAffixRanges)
-}
-
-function endsWithLineBreakNumericAffix(text: string): boolean {
-  const last = getLastSignificantCodePoint(text)
-  return last !== null && isLineBreakNumericAffix(last)
-}
-
-function startsWithDecimalDigit(text: string): boolean {
-  const first = getFirstSignificantCodePoint(text)
-  return first !== null && decimalDigitRe.test(first)
 }
 
 function splitTrailingForwardStickyCluster(text: string): { head: string, tail: string } | null {
@@ -594,6 +537,15 @@ function isUrlQueryBoundarySegment(text: string): boolean {
 }
 
 function mergeUrlLikeRuns(segmentation: MergedSegmentation): MergedSegmentation {
+  let hasUrlStart = false
+  for (let i = 0; i < segmentation.len; i++) {
+    if (segmentation.kinds[i] === 'text' && isUrlLikeRunStart(segmentation, i)) {
+      hasUrlStart = true
+      break
+    }
+  }
+  if (!hasUrlStart) return segmentation
+
   const texts = segmentation.texts.slice()
   const isWordLike = segmentation.isWordLike.slice()
   const kinds = segmentation.kinds.slice()
@@ -644,6 +596,17 @@ function mergeUrlLikeRuns(segmentation: MergedSegmentation): MergedSegmentation 
 }
 
 function mergeUrlQueryRuns(segmentation: MergedSegmentation): MergedSegmentation {
+  // Conservative guard: if no text segment looks like a URL query boundary,
+  // this pass cannot produce any change.
+  let hasQueryBoundary = false
+  for (let i = 0; i < segmentation.len; i++) {
+    if (segmentation.kinds[i] === 'text' && isUrlQueryBoundarySegment(segmentation.texts[i]!)) {
+      hasQueryBoundary = true
+      break
+    }
+  }
+  if (!hasQueryBoundary) return segmentation
+
   const texts: string[] = []
   const isWordLike: boolean[] = []
   const kinds: SegmentBreakKind[] = []
@@ -698,24 +661,8 @@ const numericJoinerChars = new Set([
   '\u2014',
 ])
 
-const noSpacePunctuationChainJoiners = new Set(['.', ',', ':', ';'])
-
-function endsWithNoSpacePunctuationChainJoiner(text: string): boolean {
-  for (let end = text.length; end > 0;) {
-    const start = previousCodePointStart(text, end)
-    const ch = text.slice(start, end)
-    if (combiningMarkRe.test(ch)) {
-      end = start
-      continue
-    }
-    return noSpacePunctuationChainJoiners.has(ch) || isLineBreakNumericAffix(ch)
-  }
-  return false
-}
-
-function isNoSpacePunctuationChainSegment(text: string, wordLike: boolean): boolean {
-  return wordLike && !isCJK(text)
-}
+const asciiPunctuationChainSegmentRe = /^[A-Za-z0-9_]+[.,:;]*$/
+const asciiPunctuationChainTrailingJoinersRe = /[.,:;]+$/
 
 function segmentContainsDecimalDigit(text: string): boolean {
   for (const ch of text) {
@@ -734,6 +681,16 @@ export function isNumericRunSegment(text: string): boolean {
 }
 
 function mergeNumericRuns(segmentation: MergedSegmentation): MergedSegmentation {
+  let hasNumericRun = false
+  for (let i = 0; i < segmentation.len; i++) {
+    const text = segmentation.texts[i]!
+    if (segmentation.kinds[i] === 'text' && isNumericRunSegment(text) && segmentContainsDecimalDigit(text)) {
+      hasNumericRun = true
+      break
+    }
+  }
+  if (!hasNumericRun) return segmentation
+
   const texts: string[] = []
   const isWordLike: boolean[] = []
   const kinds: SegmentBreakKind[] = []
@@ -778,7 +735,22 @@ function mergeNumericRuns(segmentation: MergedSegmentation): MergedSegmentation 
   }
 }
 
-function mergeNoSpacePunctuationChains(segmentation: MergedSegmentation): MergedSegmentation {
+function mergeAsciiPunctuationChains(segmentation: MergedSegmentation): MergedSegmentation {
+  let hasChain = false
+  for (let i = 0; i < segmentation.len - 1; i++) {
+    if (
+      segmentation.kinds[i] === 'text' &&
+      segmentation.isWordLike[i] &&
+      asciiPunctuationChainTrailingJoinersRe.test(segmentation.texts[i]!) &&
+      segmentation.kinds[i + 1] === 'text' &&
+      segmentation.isWordLike[i + 1]
+    ) {
+      hasChain = true
+      break
+    }
+  }
+  if (!hasChain) return segmentation
+
   const texts: string[] = []
   const isWordLike: boolean[] = []
   const kinds: SegmentBreakKind[] = []
@@ -789,25 +761,21 @@ function mergeNoSpacePunctuationChains(segmentation: MergedSegmentation): Merged
     const kind = segmentation.kinds[i]!
     const wordLike = segmentation.isWordLike[i]!
 
-    if (
-      kind === 'text' &&
-      endsWithNoSpacePunctuationChainJoiner(text) &&
-      (wordLike || endsWithLineBreakNumericAffix(text)) &&
-      !isCJK(text)
-    ) {
+    if (kind === 'text' && wordLike && asciiPunctuationChainSegmentRe.test(text)) {
       const mergedParts = [text]
-      let endsWithJoiners = true
+      let endsWithJoiners = asciiPunctuationChainTrailingJoinersRe.test(text)
       let j = i + 1
 
       while (
         endsWithJoiners &&
         j < segmentation.len &&
         segmentation.kinds[j] === 'text' &&
-        isNoSpacePunctuationChainSegment(segmentation.texts[j]!, segmentation.isWordLike[j]!)
+        segmentation.isWordLike[j] &&
+        asciiPunctuationChainSegmentRe.test(segmentation.texts[j]!)
       ) {
         const nextText = segmentation.texts[j]!
         mergedParts.push(nextText)
-        endsWithJoiners = endsWithNoSpacePunctuationChainJoiner(nextText)
+        endsWithJoiners = asciiPunctuationChainTrailingJoinersRe.test(nextText)
         j++
       }
 
@@ -835,6 +803,16 @@ function mergeNoSpacePunctuationChains(segmentation: MergedSegmentation): Merged
 }
 
 function splitHyphenatedNumericRuns(segmentation: MergedSegmentation): MergedSegmentation {
+  let hasHyphenatedNumeric = false
+  for (let i = 0; i < segmentation.len; i++) {
+    const text = segmentation.texts[i]!
+    if (segmentation.kinds[i] === 'text' && text.includes('-') && segmentContainsDecimalDigit(text)) {
+      hasHyphenatedNumeric = true
+      break
+    }
+  }
+  if (!hasHyphenatedNumeric) return segmentation
+
   const texts: string[] = []
   const isWordLike: boolean[] = []
   const kinds: SegmentBreakKind[] = []
@@ -964,8 +942,24 @@ function mergeGlueConnectedTextRuns(segmentation: MergedSegmentation): MergedSeg
 }
 
 function carryTrailingForwardStickyAcrossCJKBoundary(segmentation: MergedSegmentation): MergedSegmentation {
-  // Mutate in-place — array length is unchanged and the input is not referenced again.
-  const { texts, starts, kinds } = segmentation
+  let hasAdjacentCjkText = false
+  for (let i = 0; i < segmentation.len - 1; i++) {
+    if (
+      segmentation.kinds[i] === 'text' &&
+      segmentation.kinds[i + 1] === 'text' &&
+      isCJK(segmentation.texts[i]!) &&
+      isCJK(segmentation.texts[i + 1]!)
+    ) {
+      hasAdjacentCjkText = true
+      break
+    }
+  }
+  if (!hasAdjacentCjkText) return segmentation
+
+  const texts = segmentation.texts.slice()
+  const isWordLike = segmentation.isWordLike.slice()
+  const kinds = segmentation.kinds.slice()
+  const starts = segmentation.starts.slice()
 
   for (let i = 0; i < texts.length - 1; i++) {
     if (kinds[i] !== 'text' || kinds[i + 1] !== 'text') continue
@@ -979,7 +973,13 @@ function carryTrailingForwardStickyAcrossCJKBoundary(segmentation: MergedSegment
     starts[i + 1] = starts[i]! + split.head.length
   }
 
-  return segmentation
+  return {
+    len: texts.length,
+    texts,
+    isWordLike,
+    kinds,
+    starts,
+  }
 }
 
 function buildMergedSegmentation(
@@ -1157,12 +1157,9 @@ function buildMergedSegmentation(
     if (
       mergedKinds[i] === 'text' &&
       !mergedWordLike[i]! &&
+      isForwardStickyClusterSegment(text) &&
       nextLiveIndex >= 0 &&
-      mergedKinds[nextLiveIndex] === 'text' &&
-      (
-        isForwardStickyClusterSegment(text) ||
-        (text === '-' && startsWithDecimalDigit(mergedTexts[nextLiveIndex]!))
-      )
+      mergedKinds[nextLiveIndex] === 'text'
     ) {
       const prefixParts = forwardStickyPrefixParts[nextLiveIndex] ?? []
       prefixParts.push(text)
@@ -1207,7 +1204,7 @@ function buildMergedSegmentation(
     starts: mergedStarts,
   })
   const withMergedUrls = carryTrailingForwardStickyAcrossCJKBoundary(
-    mergeNoSpacePunctuationChains(
+    mergeAsciiPunctuationChains(
       splitHyphenatedNumericRuns(mergeNumericRuns(mergeUrlQueryRuns(mergeUrlLikeRuns(compacted)))),
     ),
   )
