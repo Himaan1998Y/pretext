@@ -168,9 +168,6 @@ const keepAllDashBreakChars = new Set([
   '\u2014',
 ])
 
-function containsCJKText(text: string): boolean {
-  return isCJK(text)
-}
 
 function endsWithKeepAllGlueText(text: string): boolean {
   const last = getLastCodePoint(text)
@@ -1265,7 +1262,7 @@ function mergeKeepAllTextSegments(
         flushGroup(i)
       }
       if (groupStart < 0) groupStart = i
-      groupContainsCJK = groupContainsCJK || containsCJKText(text)
+      groupContainsCJK = groupContainsCJK || isCJK(text)
       continue
     }
 
