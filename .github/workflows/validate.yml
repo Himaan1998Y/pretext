@@ -1,0 +1,203 @@
+name: Validate Measurements
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'performance-baseline.json'
+      - '.github/workflows/validate.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'performance-baseline.json'
+      - '.github/workflows/validate.yml'
+  workflow_dispatch:
+    inputs:
+      update_baseline:
+        description: 'Update performance baseline after run'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate & Track Performance
+    runs-on: ubuntu-latest
+    outputs:
+      exit_code: ${{ steps.validate.outputs.exit_code }}
+      has_regressions: ${{ steps.regression.outputs.has_regressions }}
+      pass_rate: ${{ steps.validate.outputs.pass_rate }}
+      criticals: ${{ steps.validate.outputs.criticals }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type-check
+        run: bun run check
+
+      - name: Run unit tests
+        run: bun test
+
+      - name: Run measurement validation
+        id: validate
+        run: |
+          set +e
+          bun run scripts/validator-cli.ts validate \
+            --report=json \
+            --output=validation-results.json \
+            --stream
+          EXIT_CODE=$?
+          set -e
+
+          # Extract summary metrics from the JSON report.
+          PASS_RATE=$(node -e "const d=require('./validation-results.json');console.log(d.summary?.passRate??1)")
+          CRITICALS=$(node -e "const d=require('./validation-results.json');console.log(d.summary?.criticals??0)")
+
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          echo "pass_rate=$PASS_RATE" >> "$GITHUB_OUTPUT"
+          echo "criticals=$CRITICALS" >> "$GITHUB_OUTPUT"
+
+          echo "Validation exit code: $EXIT_CODE"
+          echo "Pass rate: $PASS_RATE"
+          echo "Criticals: $CRITICALS"
+
+      - name: Generate HTML report
+        run: |
+          bun run scripts/validator-cli.ts report \
+            --input=validation-results.json \
+            --report=html \
+            --output=validation-report.html
+
+      - name: Generate Markdown report
+        run: |
+          bun run scripts/validator-cli.ts report \
+            --input=validation-results.json \
+            --report=markdown \
+            --output=validation-report.md
+
+      - name: Check performance regressions
+        id: regression
+        run: |
+          set +e
+          bun run scripts/validator-cli.ts benchmark > benchmark-output.txt 2>&1
+          set -e
+
+          # Simple regression flag based on exit code.
+          if grep -q 'CRITICAL' benchmark-output.txt 2>/dev/null; then
+            echo "has_regressions=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_regressions=false" >> "$GITHUB_OUTPUT"
+          fi
+          cat benchmark-output.txt
+
+      - name: Update performance baseline
+        if: |
+          github.ref == 'refs/heads/main' &&
+          (github.event.inputs.update_baseline == 'true' || steps.validate.outputs.exit_code == '0')
+        run: |
+          bun run scripts/validator-cli.ts benchmark --update-baseline
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add performance-baseline.json
+          git diff --cached --quiet || git commit -m "chore: update performance baseline [skip ci]"
+          git push
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report-${{ github.run_number }}
+          path: |
+            validation-results.json
+            validation-report.html
+            validation-report.md
+          retention-days: 30
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## 📊 Measurement Validation Results\n\n';
+
+            try {
+              const md = fs.readFileSync('validation-report.md', 'utf8');
+              // Include the summary section only to keep the comment compact.
+              const summaryMatch = md.match(/## Summary[\s\S]*?(?=##|$)/);
+              if (summaryMatch) body += summaryMatch[0] + '\n';
+            } catch {}
+
+            const exitCode = '${{ steps.validate.outputs.exit_code }}';
+            const passRate = '${{ steps.validate.outputs.pass_rate }}';
+            const criticals = '${{ steps.validate.outputs.criticals }}';
+
+            if (exitCode === '0') {
+              body += `\n✅ **All validations passed** — pass rate: ${(parseFloat(passRate) * 100).toFixed(1)}%\n`;
+            } else if (exitCode === '1') {
+              body += `\n⚠️ **Warnings detected** — pass rate: ${(parseFloat(passRate) * 100).toFixed(1)}%\n`;
+            } else {
+              body += `\n❌ **Critical divergences detected** — ${criticals} critical, pass rate: ${(parseFloat(passRate) * 100).toFixed(1)}%\n`;
+            }
+
+            body += `\n[View full HTML report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+
+            // Find and update existing bot comment, or create new one.
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Measurement Validation Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail on critical divergences
+        if: steps.validate.outputs.exit_code == '2'
+        run: |
+          echo "::error::Critical measurement divergences detected. Check validation-report.html for details."
+          exit 2
+
+      - name: Notify Slack on regression
+        if: steps.regression.outputs.has_regressions == 'true' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "text": "⚡ Performance regression detected in ${{ github.repository }} on branch ${{ github.ref_name }}. See: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
