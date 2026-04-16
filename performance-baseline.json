@@ -1,0 +1,70 @@
+{
+  "version": "0.0.4",
+  "recordedAt": 1743846000000,
+  "note": "Initial baseline. Regenerate with: bun run validator benchmark --update-baseline",
+  "entries": [
+    {
+      "language": "en",
+      "avgMs": 0.5,
+      "p95Ms": 1.2,
+      "p99Ms": 2.0,
+      "passRate": 1.0,
+      "recordedAt": 1743846000000,
+      "version": "0.0.4"
+    },
+    {
+      "language": "ar",
+      "avgMs": 0.8,
+      "p95Ms": 1.8,
+      "p99Ms": 3.0,
+      "passRate": 1.0,
+      "recordedAt": 1743846000000,
+      "version": "0.0.4"
+    },
+    {
+      "language": "zh",
+      "avgMs": 0.6,
+      "p95Ms": 1.4,
+      "p99Ms": 2.2,
+      "passRate": 1.0,
+      "recordedAt": 1743846000000,
+      "version": "0.0.4"
+    },
+    {
+      "language": "ja",
+      "avgMs": 0.6,
+      "p95Ms": 1.4,
+      "p99Ms": 2.2,
+      "passRate": 1.0,
+      "recordedAt": 1743846000000,
+      "version": "0.0.4"
+    },
+    {
+      "language": "ko",
+      "avgMs": 0.7,
+      "p95Ms": 1.5,
+      "p99Ms": 2.5,
+      "passRate": 1.0,
+      "recordedAt": 1743846000000,
+      "version": "0.0.4"
+    },
+    {
+      "language": "th",
+      "avgMs": 0.9,
+      "p95Ms": 2.0,
+      "p99Ms": 3.5,
+      "passRate": 1.0,
+      "recordedAt": 1743846000000,
+      "version": "0.0.4"
+    },
+    {
+      "language": "hi",
+      "avgMs": 0.8,
+      "p95Ms": 1.8,
+      "p99Ms": 3.0,
+      "passRate": 1.0,
+      "recordedAt": 1743846000000,
+      "version": "0.0.4"
+    }
+  ]
+}
