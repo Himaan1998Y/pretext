@@ -2,7 +2,7 @@ Current priorities:
 
 1. Keep the canaries honest
 
-- Mixed app text is exact again in the maintained Chrome/Safari step10 sweeps; keep it as a product-shaped regression canary rather than an active tuning target.
+- Mixed app text still has the extractor-sensitive `710px` soft-hyphen miss.
 - Chinese is still the clearest active CJK canary: Safari's step10 sweep is clean, while Chrome keeps a broader narrow-width positive field with real font sensitivity.
 - Myanmar and Urdu remain useful shaping/context canaries, but they are not the active tuning target right now.
 
@@ -15,9 +15,7 @@ Current priorities:
 - If we add another Southeast Asian canary, prefer a clean source text that broadens the class instead of another wrapped/legal/raw-source artifact.
 - Expand the sampled font matrix only where a canary still looks genuinely imperfect.
 - Treat strongly font-sensitive or shaping-sensitive misses as boundary-finding for the current architecture, not automatic invitations for another local glue rule.
-- Keep the height-only `layout()` path simple and allocation-light, and use the rich/manual benchmarks to steer range/cursor layout work.
-- The duplicate public streaming chunk lookup was removed in 3757fa0; only revisit a stateful streaming variant or cursor-carried chunk hint if the remaining single lookup per emitted line shows up in the chunk-heavy benchmark.
-- If arbitrary interior rich cursors become common, consider a compact `segmentIndex -> chunkIndex` side table, ideally only on rich prepared handles or only when `chunks.length > 1`.
+- Keep the hot `layout()` path simple and allocation-light while the rich path absorbs more userland layout needs.
 
 3. Demo work
 

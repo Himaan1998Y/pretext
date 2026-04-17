@@ -23,6 +23,7 @@ export type PreparedLineBreakData = {
     endSegmentIndex: number
     consumedEndSegmentIndex: number
   }[]
+  chunkBySegment: Uint32Array | null
 }
 
 type InternalLineVisitor = (
@@ -205,6 +206,11 @@ function getTerminalLetterSpacing(
   if (prepared.letterSpacing === 0) return 0
 
 function findChunkIndexForStart(prepared: PreparedLineBreakData, segmentIndex: number): number {
+  if (prepared.chunkBySegment !== null && segmentIndex >= 0 && segmentIndex < prepared.chunkBySegment.length) {
+    const c = prepared.chunkBySegment[segmentIndex]!
+    return c < prepared.chunks.length ? c : -1
+  }
+
   let lo = 0
   let hi = prepared.chunks.length
 
