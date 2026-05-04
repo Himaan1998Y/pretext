@@ -1,0 +1,70 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    name: Sync with upstream
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync fork
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git remote add upstream https://github.com/chenglou/pretext.git || true
+          git fetch upstream main
+
+          # If we're behind, create a tracking branch and PR
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Fork is up to date with upstream"
+          else
+            echo "Fork is behind upstream, preparing sync"
+            git checkout -b sync-upstream-$(date +%Y%m%d) || git checkout sync-upstream-*
+            git merge upstream/main --no-edit
+            git push origin HEAD -f
+          fi
+
+      - name: Create Pull Request
+        if: failure() == false
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:sync-upstream-*`
+            });
+
+            if (prs.length === 0) {
+              // Check if sync needed
+              const { data: branches } = await github.rest.repos.listBranches({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+
+              const syncBranch = branches.find(b => b.name.startsWith('sync-upstream-'));
+              if (syncBranch) {
+                const pr = await github.rest.pulls.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: 'chore: sync upstream changes',
+                  head: syncBranch.name,
+                  base: 'main',
+                  body: 'Automated sync with upstream chenglou/pretext\n\nThis PR brings in the latest changes from the upstream repository. Review carefully before merging.'
+                });
+                console.log(`Created PR: ${pr.data.html_url}`);
+              }
+            }
