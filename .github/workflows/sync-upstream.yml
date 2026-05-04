@@ -2,69 +2,162 @@ name: Sync with Upstream
 
 on:
   schedule:
-    # Run every 6 hours
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    name: Sync with upstream
+    name: Sync fork with upstream
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync fork
+      - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Fetch upstream
+        run: |
           git remote add upstream https://github.com/chenglou/pretext.git || true
-          git fetch upstream main
+          git fetch upstream main --tags
 
-          # If we're behind, create a tracking branch and PR
-          if git merge-base --is-ancestor upstream/main HEAD; then
-            echo "Fork is up to date with upstream"
+      - name: Check if upstream has new commits
+        id: check
+        run: |
+          UPSTREAM_SHA=$(git rev-parse upstream/main)
+          # Find the merge base (last common ancestor between our main and upstream/main)
+          MERGE_BASE=$(git merge-base HEAD upstream/main)
+          echo "upstream_sha=$UPSTREAM_SHA" >> $GITHUB_OUTPUT
+          echo "merge_base=$MERGE_BASE" >> $GITHUB_OUTPUT
+          if [ "$MERGE_BASE" = "$UPSTREAM_SHA" ]; then
+            echo "status=up-to-date" >> $GITHUB_OUTPUT
+            echo "Fork is up to date with upstream (upstream is ancestor of our main)"
           else
-            echo "Fork is behind upstream, preparing sync"
-            git checkout -b sync-upstream-$(date +%Y%m%d) || git checkout sync-upstream-*
-            git merge upstream/main --no-edit
-            git push origin HEAD -f
+            echo "status=behind" >> $GITHUB_OUTPUT
+            echo "Upstream has new commits since our last sync"
           fi
 
-      - name: Create Pull Request
-        if: failure() == false
+      - name: Create sync branch
+        if: steps.check.outputs.status == 'behind'
+        id: branch
+        run: |
+          BRANCH="sync-upstream-$(date +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+          # Rebase our custom commits on top of upstream/main
+          # This preserves our cherry-picked patches on top of new upstream work
+          if git rebase upstream/main; then
+            echo "rebase_status=success" >> $GITHUB_OUTPUT
+            echo "Rebase succeeded cleanly"
+          else
+            echo "rebase_status=conflict" >> $GITHUB_OUTPUT
+            git rebase --abort
+            echo "Rebase has conflicts — needs manual resolution"
+          fi
+
+      - name: Push sync branch
+        if: steps.check.outputs.status == 'behind' && steps.branch.outputs.rebase_status == 'success'
+        run: git push origin "${{ steps.branch.outputs.branch }}" --force-with-lease
+
+      - name: Rebuild dist after rebase
+        if: steps.check.outputs.status == 'behind' && steps.branch.outputs.rebase_status == 'success'
+        run: |
+          npm install --legacy-peer-deps
+          npm run build:package
+          git add -f dist/
+          git diff --cached --quiet || git commit -m "build: rebuild dist after upstream sync $(date +%Y%m%d)"
+          git push origin "${{ steps.branch.outputs.branch }}"
+
+      - name: Open pull request (clean rebase)
+        if: steps.check.outputs.status == 'behind' && steps.branch.outputs.rebase_status == 'success'
         uses: actions/github-script@v7
         with:
           script: |
-            const { data: prs } = await github.rest.pulls.list({
+            const branch = '${{ steps.branch.outputs.branch }}';
+            const upstreamSha = '${{ steps.check.outputs.upstream_sha }}';
+
+            // Check if a sync PR for this branch already exists
+            const { data: existingPRs } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
-              head: `${context.repo.owner}:sync-upstream-*`
+              head: `${context.repo.owner}:${branch}`,
+              base: 'main',
             });
 
-            if (prs.length === 0) {
-              // Check if sync needed
-              const { data: branches } = await github.rest.repos.listBranches({
-                owner: context.repo.owner,
-                repo: context.repo.repo
-              });
-
-              const syncBranch = branches.find(b => b.name.startsWith('sync-upstream-'));
-              if (syncBranch) {
-                const pr = await github.rest.pulls.create({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  title: 'chore: sync upstream changes',
-                  head: syncBranch.name,
-                  base: 'main',
-                  body: 'Automated sync with upstream chenglou/pretext\n\nThis PR brings in the latest changes from the upstream repository. Review carefully before merging.'
-                });
-                console.log(`Created PR: ${pr.data.html_url}`);
-              }
+            if (existingPRs.length > 0) {
+              console.log(`PR already exists: ${existingPRs[0].html_url}`);
+              return;
             }
+
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `chore: sync upstream changes (${new Date().toISOString().slice(0,10)})`,
+              head: branch,
+              base: 'main',
+              body: [
+                '## Automated upstream sync',
+                '',
+                `Upstream \`chenglou/pretext\` has new commits since our last sync. This PR rebases our custom patches on top of \`${upstreamSha.slice(0,8)}\`.`,
+                '',
+                '### What to check before merging',
+                '- [ ] Our cherry-picked patches still apply correctly (#160, #161, #132)',
+                '- [ ] `dist/` was rebuilt from the rebased source',
+                '- [ ] No new upstream APIs that conflict with our patches',
+                '',
+                '### After merging',
+                'Tag the new commit and update `pretext-pdf/package.json` to point to the new tag.',
+              ].join('\n'),
+            });
+            console.log(`Created PR: ${pr.data.html_url}`);
+
+      - name: Open pull request (conflict — needs manual fix)
+        if: steps.check.outputs.status == 'behind' && steps.branch.outputs.rebase_status == 'conflict'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const upstreamSha = '${{ steps.check.outputs.upstream_sha }}';
+
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `chore: upstream sync has conflicts — manual rebase needed`,
+              body: [
+                '## Upstream sync conflict',
+                '',
+                `Upstream \`chenglou/pretext\` has new commits at \`${upstreamSha.slice(0,8)}\` that conflict with our cherry-picked patches.`,
+                '',
+                '### Manual steps',
+                '```bash',
+                'cd pretext  # our fork',
+                'git fetch upstream main',
+                'git checkout -b sync-upstream-manual',
+                'git rebase upstream/main',
+                '# resolve conflicts, then:',
+                'git rebase --continue',
+                'npm run build:package',
+                'git add -f dist/',
+                'git commit -m "build: rebuild dist after manual sync"',
+                'git push origin sync-upstream-manual',
+                '# open PR to main',
+                '```',
+                '',
+                '### Our patches (must be preserved)',
+                '- `9b61450` PR #160: sideEffects: false',
+                '- `bfc10c8` PR #161: cache breakable fit advances',
+                '- `039b208` PR #132: CJK overflow prevention',
+              ].join('\n'),
+              labels: ['upstream-sync', 'needs-manual'],
+            });
+            console.log(`Created issue: ${issue.data.html_url}`);
