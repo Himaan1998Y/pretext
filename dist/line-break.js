@@ -9,6 +9,9 @@ function breaksAfter(kind) {
         kind === 'zero-width-break' ||
         kind === 'soft-hyphen');
 }
+function isSimpleCollapsibleSpace(kind) {
+    return kind === 'space';
+}
 function normalizeLineStartSegmentIndex(prepared, segmentIndex, endSegmentIndex = prepared.widths.length) {
     while (segmentIndex < endSegmentIndex) {
         const kind = prepared.kinds[segmentIndex];
@@ -82,6 +85,10 @@ function fitSoftHyphenBreak(graphemeFitAdvances, initialWidth, maxWidth, lineFit
     return { fitCount, fittedWidth };
 }
 function findChunkIndexForStart(prepared, segmentIndex) {
+    if (prepared.chunkBySegment !== null && segmentIndex >= 0 && segmentIndex < prepared.chunkBySegment.length) {
+        const c = prepared.chunkBySegment[segmentIndex];
+        return c < prepared.chunks.length ? c : -1;
+    }
     let lo = 0;
     let hi = prepared.chunks.length;
     while (lo < hi) {
@@ -147,6 +154,9 @@ export function normalizeLineStart(prepared, start) {
     const chunkIndex = normalizeLineStartChunkIndex(prepared, cursor);
     return chunkIndex < 0 ? null : cursor;
 }
+// Specialized hot-path counter that mirrors walkPreparedLines break semantics
+// without tracking cursors/widths. Must stay aligned — see layout.test.ts
+// "countPreparedLines stays aligned with the walked line counter".
 export function countPreparedLines(prepared, maxWidth) {
     return walkPreparedLinesRaw(prepared, maxWidth);
 }
@@ -250,6 +260,15 @@ function walkPreparedLinesSimple(prepared, maxWidth, onLine) {
         }
         const newW = lineW + w;
         if (newW > fitLimit) {
+            // CSS behavior: trailing collapsible space hangs past the line edge
+            // without triggering a line break — matches countPreparedLinesSimple.
+            // Update lineEndSegmentIndex so reconstruction includes the hanging space.
+            if (isSimpleCollapsibleSpace(kind)) {
+                lineEndSegmentIndex = i + 1;
+                lineEndGraphemeIndex = 0;
+                i++;
+                continue;
+            }
             if (breakAfter) {
                 appendWholeSegment(i, w);
                 emitCurrentLine(i + 1, 0, lineW - w);
@@ -766,6 +785,14 @@ function stepPreparedSimpleLineGeometry(prepared, cursor, maxWidth) {
             continue;
         }
         if (lineW + w > fitLimit) {
+            // CSS behavior: trailing collapsible space hangs past the line edge
+            // without triggering a line break — matches countPreparedLinesSimple.
+            // Update lineEndSegmentIndex so reconstruction includes the hanging space.
+            if (isSimpleCollapsibleSpace(kind)) {
+                lineEndSegmentIndex = i + 1;
+                lineEndGraphemeIndex = 0;
+                continue;
+            }
             if (breakAfter) {
                 cursor.segmentIndex = i + 1;
                 cursor.graphemeIndex = 0;

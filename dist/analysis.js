@@ -45,6 +45,7 @@ export function setAnalysisLocale(locale) {
 }
 const arabicScriptRe = /\p{Script=Arabic}/u;
 const combiningMarkRe = /\p{M}/u;
+const currencySymbolRe = /\p{Sc}/u;
 const decimalDigitRe = /\p{Nd}/u;
 function containsArabicScript(text) {
     return arabicScriptRe.test(text);
@@ -106,9 +107,6 @@ const keepAllDashBreakChars = new Set([
     '\u2013',
     '\u2014',
 ]);
-function containsCJKText(text) {
-    return isCJK(text);
-}
 function endsWithKeepAllGlueText(text) {
     const last = getLastCodePoint(text);
     return last !== null && keepAllGlueChars.has(last);
@@ -159,7 +157,7 @@ export const kinsokuStart = new Set([
 export const kinsokuEnd = new Set([
     '"',
     '(', '[', '{',
-    '“', '‘', '«', '‹',
+    '“', '‘', '«', '‹', '‚', '„',
     '\uFF08',
     '\u3014',
     '\u3008',
@@ -216,7 +214,7 @@ function isLeftStickyPunctuationSegment(segment) {
         return true;
     let sawPunctuation = false;
     for (const ch of segment) {
-        if (leftStickyPunctuation.has(ch)) {
+        if (leftStickyPunctuation.has(ch) || currencySymbolRe.test(ch)) {
             sawPunctuation = true;
             continue;
         }
@@ -237,7 +235,7 @@ function isForwardStickyClusterSegment(segment) {
     if (isEscapedQuoteClusterSegment(segment))
         return true;
     for (const ch of segment) {
-        if (!kinsokuEnd.has(ch) && !forwardStickyGlue.has(ch) && !combiningMarkRe.test(ch))
+        if (!kinsokuEnd.has(ch) && !forwardStickyGlue.has(ch) && !combiningMarkRe.test(ch) && !currencySymbolRe.test(ch))
             return false;
     }
     return segment.length > 0;
@@ -437,12 +435,21 @@ function isUrlQueryBoundarySegment(text) {
     return text.includes('?') && (text.includes('://') || text.startsWith('www.'));
 }
 function mergeUrlLikeRuns(segmentation) {
+    let hasUrlStart = false;
+    for (let i = 0; i < segmentation.len; i++) {
+        if (segmentation.kinds[i] === 'text' && isUrlLikeRunStart(segmentation, i)) {
+            hasUrlStart = true;
+            break;
+        }
+    }
+    if (!hasUrlStart)
+        return segmentation;
     const texts = segmentation.texts.slice();
     const isWordLike = segmentation.isWordLike.slice();
     const kinds = segmentation.kinds.slice();
     const starts = segmentation.starts.slice();
     for (let i = 0; i < segmentation.len; i++) {
-        if (kinds[i] !== 'text' || !isUrlLikeRunStart(segmentation, i))
+        if (texts[i].length === 0 || kinds[i] !== 'text' || !isUrlLikeRunStart(segmentation, i))
             continue;
         const mergedParts = [texts[i]];
         let j = i + 1;
@@ -484,6 +491,17 @@ function mergeUrlLikeRuns(segmentation) {
     };
 }
 function mergeUrlQueryRuns(segmentation) {
+    // Conservative guard: if no text segment looks like a URL query boundary,
+    // this pass cannot produce any change.
+    let hasQueryBoundary = false;
+    for (let i = 0; i < segmentation.len; i++) {
+        if (segmentation.kinds[i] === 'text' && isUrlQueryBoundarySegment(segmentation.texts[i])) {
+            hasQueryBoundary = true;
+            break;
+        }
+    }
+    if (!hasQueryBoundary)
+        return segmentation;
     const texts = [];
     const isWordLike = [];
     const kinds = [];
@@ -549,6 +567,16 @@ export function isNumericRunSegment(text) {
     return true;
 }
 function mergeNumericRuns(segmentation) {
+    let hasNumericRun = false;
+    for (let i = 0; i < segmentation.len; i++) {
+        const text = segmentation.texts[i];
+        if (segmentation.kinds[i] === 'text' && isNumericRunSegment(text) && segmentContainsDecimalDigit(text)) {
+            hasNumericRun = true;
+            break;
+        }
+    }
+    if (!hasNumericRun)
+        return segmentation;
     const texts = [];
     const isWordLike = [];
     const kinds = [];
@@ -586,6 +614,19 @@ function mergeNumericRuns(segmentation) {
     };
 }
 function mergeAsciiPunctuationChains(segmentation) {
+    let hasChain = false;
+    for (let i = 0; i < segmentation.len - 1; i++) {
+        if (segmentation.kinds[i] === 'text' &&
+            segmentation.isWordLike[i] &&
+            asciiPunctuationChainTrailingJoinersRe.test(segmentation.texts[i]) &&
+            segmentation.kinds[i + 1] === 'text' &&
+            segmentation.isWordLike[i + 1]) {
+            hasChain = true;
+            break;
+        }
+    }
+    if (!hasChain)
+        return segmentation;
     const texts = [];
     const isWordLike = [];
     const kinds = [];
@@ -629,6 +670,16 @@ function mergeAsciiPunctuationChains(segmentation) {
     };
 }
 function splitHyphenatedNumericRuns(segmentation) {
+    let hasHyphenatedNumeric = false;
+    for (let i = 0; i < segmentation.len; i++) {
+        const text = segmentation.texts[i];
+        if (segmentation.kinds[i] === 'text' && text.includes('-') && segmentContainsDecimalDigit(text)) {
+            hasHyphenatedNumeric = true;
+            break;
+        }
+    }
+    if (!hasHyphenatedNumeric)
+        return segmentation;
     const texts = [];
     const isWordLike = [];
     const kinds = [];
@@ -745,6 +796,18 @@ function mergeGlueConnectedTextRuns(segmentation) {
     };
 }
 function carryTrailingForwardStickyAcrossCJKBoundary(segmentation) {
+    let hasAdjacentCjkText = false;
+    for (let i = 0; i < segmentation.len - 1; i++) {
+        if (segmentation.kinds[i] === 'text' &&
+            segmentation.kinds[i + 1] === 'text' &&
+            isCJK(segmentation.texts[i]) &&
+            isCJK(segmentation.texts[i + 1])) {
+            hasAdjacentCjkText = true;
+            break;
+        }
+    }
+    if (!hasAdjacentCjkText)
+        return segmentation;
     const texts = segmentation.texts.slice();
     const isWordLike = segmentation.isWordLike.slice();
     const kinds = segmentation.kinds.slice();
@@ -1052,7 +1115,7 @@ function mergeKeepAllTextSegments(normalized, segmentation, breakAfterPunctuatio
             }
             if (groupStart < 0)
                 groupStart = i;
-            groupContainsCJK = groupContainsCJK || containsCJKText(text);
+            groupContainsCJK = groupContainsCJK || isCJK(text);
             continue;
         }
         flushGroup(i);

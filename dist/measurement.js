@@ -2,6 +2,8 @@ import { isCJK } from './analysis.js';
 let measureContext = null;
 const segmentMetricCaches = new Map();
 let cachedEngineProfile = null;
+let lastContextFont = null;
+const warnedFonts = new Set();
 // Safari's prefix-fit policy is useful for ordinary word-sized runs, but letting
 // it measure every growing prefix of a giant segment recreates a pathological
 // superlinear prepare-time path. Past this size, switch to the cheaper
@@ -81,9 +83,15 @@ export function getEngineProfile() {
 }
 export function parseFontSize(font) {
     const m = font.match(/(\d+(?:\.\d+)?)\s*px/);
-    return m ? parseFloat(m[1]) : 16;
+    if (m)
+        return parseFloat(m[1]);
+    if (!warnedFonts.has(font) && typeof console !== 'undefined') {
+        warnedFonts.add(font);
+        console.warn('pretext: no px size in font "' + font + '"; emoji correction may be inaccurate');
+    }
+    return 16;
 }
-function getSharedGraphemeSegmenter() {
+export function getSharedGraphemeSegmenter() {
     if (sharedGraphemeSegmenter === null) {
         sharedGraphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
     }
@@ -96,14 +104,18 @@ export function textMayContainEmoji(text) {
     return maybeEmojiRe.test(text);
 }
 function getEmojiCorrection(font, fontSize) {
-    let correction = emojiCorrectionCache.get(font);
-    if (correction !== undefined)
-        return correction;
+    const cached = emojiCorrectionCache.get(font);
+    if (cached !== undefined)
+        return cached;
     const ctx = getMeasureContext();
-    ctx.font = font;
+    if (lastContextFont !== font) {
+        ctx.font = font;
+        lastContextFont = font;
+    }
     const canvasW = ctx.measureText('\u{1F600}').width;
-    correction = 0;
-    if (canvasW > fontSize + 0.5 &&
+    let correction = 0;
+    const inflationDetected = canvasW > fontSize + 0.5;
+    if (inflationDetected &&
         typeof document !== 'undefined' &&
         document.body !== null) {
         const span = document.createElement('span');
@@ -119,7 +131,12 @@ function getEmojiCorrection(font, fontSize) {
             correction = canvasW - domW;
         }
     }
-    emojiCorrectionCache.set(font, correction);
+    // Only cache if the comparison completed or no inflation was detected.
+    // If body was null when inflation was detected, skip caching so we retry
+    // once document.body becomes available.
+    if (!inflationDetected || (typeof document !== 'undefined' && document.body !== null)) {
+        emojiCorrectionCache.set(font, correction);
+    }
     return correction;
 }
 function countEmojiGraphemes(text) {
@@ -214,7 +231,10 @@ export function getSegmentBreakableFitAdvances(seg, metrics, cache, emojiCorrect
 }
 export function getFontMeasurementState(font, needsEmojiCorrection) {
     const ctx = getMeasureContext();
-    ctx.font = font;
+    if (lastContextFont !== font) {
+        ctx.font = font;
+        lastContextFont = font;
+    }
     const cache = getSegmentMetricCache(font);
     const fontSize = parseFontSize(font);
     const emojiCorrection = needsEmojiCorrection ? getEmojiCorrection(font, fontSize) : 0;
@@ -224,4 +244,7 @@ export function clearMeasurementCaches() {
     segmentMetricCaches.clear();
     emojiCorrectionCache.clear();
     sharedGraphemeSegmenter = null;
+    lastContextFont = null;
+    warnedFonts.clear();
+    cachedEngineProfile = null;
 }

@@ -13,6 +13,7 @@ type PreparedCore = {
     discretionaryHyphenWidth: number;
     tabStopAdvance: number;
     chunks: PreparedLineChunk[];
+    chunkBySegment: Uint32Array | null;
 };
 export type PreparedText = {
     readonly [preparedTextBrand]: true;

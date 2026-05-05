@@ -17,6 +17,7 @@ export declare function getSegmentMetricCache(font: string): Map<string, Segment
 export declare function getSegmentMetrics(seg: string, cache: Map<string, SegmentMetrics>): SegmentMetrics;
 export declare function getEngineProfile(): EngineProfile;
 export declare function parseFontSize(font: string): number;
+export declare function getSharedGraphemeSegmenter(): Intl.Segmenter;
 export declare function textMayContainEmoji(text: string): boolean;
 export declare function getCorrectedSegmentWidth(seg: string, metrics: SegmentMetrics, emojiCorrection: number): number;
 export declare function getSegmentGraphemeWidths(seg: string, cache: Map<string, SegmentMetrics>, emojiCorrection: number): number[] | null;

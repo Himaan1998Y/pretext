@@ -19,6 +19,7 @@ export type PreparedLineBreakData = {
         endSegmentIndex: number;
         consumedEndSegmentIndex: number;
     }[];
+    chunkBySegment: Uint32Array | null;
 };
 export type InternalLayoutLine = {
     startSegmentIndex: number;
