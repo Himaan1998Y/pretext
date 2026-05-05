@@ -108,27 +108,23 @@ function stepRichInlineLine(flow, maxWidth, cursor, collectFragment) {
     let lineWidth = 0;
     let remainingWidth = safeWidth;
     let itemIndex = cursor.itemIndex;
-    const textCursor = {
-        segmentIndex: cursor.segmentIndex,
-        graphemeIndex: cursor.graphemeIndex,
-    };
     lineLoop: while (itemIndex < flow.items.length) {
         const item = flow.items[itemIndex];
-        if (!isLineStartCursor(textCursor) &&
-            textCursor.segmentIndex === item.endSegmentIndex &&
-            textCursor.graphemeIndex === item.endGraphemeIndex) {
+        if (!isLineStartCursor(cursor) &&
+            cursor.segmentIndex === item.endSegmentIndex &&
+            cursor.graphemeIndex === item.endGraphemeIndex) {
             itemIndex++;
-            textCursor.segmentIndex = 0;
-            textCursor.graphemeIndex = 0;
+            cursor.segmentIndex = 0;
+            cursor.graphemeIndex = 0;
             continue;
         }
         const gapBefore = lineWidth === 0 ? 0 : item.gapBefore;
-        const atItemStart = isLineStartCursor(textCursor);
+        const atItemStart = isLineStartCursor(cursor);
         if (item.break === 'never') {
             if (!atItemStart) {
                 itemIndex++;
-                textCursor.segmentIndex = 0;
-                textCursor.graphemeIndex = 0;
+                cursor.segmentIndex = 0;
+                cursor.graphemeIndex = 0;
                 continue;
             }
             const occupiedWidth = item.naturalWidth + item.extraWidth;
@@ -142,8 +138,8 @@ function stepRichInlineLine(flow, maxWidth, cursor, collectFragment) {
             lineWidth += totalWidth;
             remainingWidth = Math.max(0, safeWidth - lineWidth);
             itemIndex++;
-            textCursor.segmentIndex = 0;
-            textCursor.graphemeIndex = 0;
+            cursor.segmentIndex = 0;
+            cursor.graphemeIndex = 0;
             continue;
         }
         const reservedWidth = gapBefore + item.extraWidth;
@@ -159,41 +155,36 @@ function stepRichInlineLine(flow, maxWidth, cursor, collectFragment) {
                 lineWidth += totalWidth;
                 remainingWidth = Math.max(0, safeWidth - lineWidth);
                 itemIndex++;
-                textCursor.segmentIndex = 0;
-                textCursor.graphemeIndex = 0;
+                cursor.segmentIndex = 0;
+                cursor.graphemeIndex = 0;
                 continue;
             }
         }
         const availableWidth = Math.max(1, remainingWidth - reservedWidth);
         const lineEnd = {
-            segmentIndex: textCursor.segmentIndex,
-            graphemeIndex: textCursor.graphemeIndex,
+            segmentIndex: cursor.segmentIndex,
+            graphemeIndex: cursor.graphemeIndex,
         };
         const lineWidthForItem = stepPreparedLineGeometry(item.prepared, lineEnd, availableWidth);
         if (lineWidthForItem === null) {
             itemIndex++;
-            textCursor.segmentIndex = 0;
-            textCursor.graphemeIndex = 0;
+            cursor.segmentIndex = 0;
+            cursor.graphemeIndex = 0;
             continue;
         }
-        if (textCursor.segmentIndex === lineEnd.segmentIndex &&
-            textCursor.graphemeIndex === lineEnd.graphemeIndex) {
+        if (cursor.segmentIndex === lineEnd.segmentIndex &&
+            cursor.graphemeIndex === lineEnd.graphemeIndex) {
             itemIndex++;
-            textCursor.segmentIndex = 0;
-            textCursor.graphemeIndex = 0;
+            cursor.segmentIndex = 0;
+            cursor.graphemeIndex = 0;
             continue;
         }
-        // Guard against overflow: stepPreparedLineGeometry always places at
-        // least one content unit even when it exceeds maxWidth (to prevent
-        // infinite loops in standalone layout). When we already have content on
-        // the current line and the returned fragment would push us past
-        // safeWidth, break the line before this item so the fragment can start
-        // fresh on the next line where it will have the full width available.
-        if (lineWidth > 0 &&
-            atItemStart &&
-            gapBefore + lineWidthForItem + item.extraWidth > remainingWidth) {
+        const itemOccupiedWidth = lineWidthForItem + item.extraWidth;
+        const lineWidthContribution = gapBefore + itemOccupiedWidth;
+        // The lower-level walker may force one unit to make progress. If that unit
+        // only fits on a fresh line, wrap before this rich item instead.
+        if (lineWidth > 0 && atItemStart && lineWidthContribution > remainingWidth)
             break lineLoop;
-        }
         // If the only thing we can fit after paying the boundary gap is a partial
         // slice of the item's first segment, prefer wrapping before the item so we
         // keep whole-word-style boundaries when they exist. But once the current
@@ -212,28 +203,26 @@ function stepRichInlineLine(flow, maxWidth, cursor, collectFragment) {
                 break lineLoop;
             }
         }
-        collectFragment?.(item, gapBefore, lineWidthForItem + item.extraWidth, cloneCursor(textCursor), {
+        collectFragment?.(item, gapBefore, itemOccupiedWidth, cloneCursor(cursor), {
             segmentIndex: lineEnd.segmentIndex,
             graphemeIndex: lineEnd.graphemeIndex,
         });
-        lineWidth += gapBefore + lineWidthForItem + item.extraWidth;
+        lineWidth += lineWidthContribution;
         remainingWidth = Math.max(0, safeWidth - lineWidth);
         if (lineEnd.segmentIndex === item.endSegmentIndex &&
             lineEnd.graphemeIndex === item.endGraphemeIndex) {
             itemIndex++;
-            textCursor.segmentIndex = 0;
-            textCursor.graphemeIndex = 0;
+            cursor.segmentIndex = 0;
+            cursor.graphemeIndex = 0;
             continue;
         }
-        textCursor.segmentIndex = lineEnd.segmentIndex;
-        textCursor.graphemeIndex = lineEnd.graphemeIndex;
+        cursor.segmentIndex = lineEnd.segmentIndex;
+        cursor.graphemeIndex = lineEnd.graphemeIndex;
         break;
     }
     if (lineWidth === 0)
         return null;
     cursor.itemIndex = itemIndex;
-    cursor.segmentIndex = textCursor.segmentIndex;
-    cursor.graphemeIndex = textCursor.graphemeIndex;
     return lineWidth;
 }
 export function layoutNextRichInlineLineRange(prepared, maxWidth, start = RICH_INLINE_START_CURSOR) {
