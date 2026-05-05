@@ -48,10 +48,6 @@ function breaksAfter(kind: SegmentBreakKind): boolean {
   )
 }
 
-function canBreakAfter(kind: SegmentBreakKind): boolean {
-  return breaksAfter(kind)
-}
-
 function isSimpleCollapsibleSpace(kind: SegmentBreakKind): boolean {
   return kind === 'space'
 }
@@ -477,8 +473,11 @@ function walkPreparedLinesSimple(
     const newW = lineW + w
     if (newW > fitLimit) {
       // CSS behavior: trailing collapsible space hangs past the line edge
-      // without triggering a line break — matches countPreparedLinesSimple
+      // without triggering a line break — matches countPreparedLinesSimple.
+      // Update lineEndSegmentIndex so reconstruction includes the hanging space.
       if (isSimpleCollapsibleSpace(kind)) {
+        lineEndSegmentIndex = i + 1
+        lineEndGraphemeIndex = 0
         i++
         continue
       }
@@ -1197,8 +1196,11 @@ function stepPreparedSimpleLineGeometry(
 
     if (lineW + w > fitLimit) {
       // CSS behavior: trailing collapsible space hangs past the line edge
-      // without triggering a line break — matches countPreparedLinesSimple
+      // without triggering a line break — matches countPreparedLinesSimple.
+      // Update lineEndSegmentIndex so reconstruction includes the hanging space.
       if (isSimpleCollapsibleSpace(kind)) {
+        lineEndSegmentIndex = i + 1
+        lineEndGraphemeIndex = 0
         continue
       }
 
