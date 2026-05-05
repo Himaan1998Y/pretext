@@ -40,11 +40,6 @@ import {
   getLineTextCache,
 } from './line-text.js'
 
-// Rich-path only. Reuses grapheme splits while materializing multiple lines
-// from the same prepared handle, without pushing that cache into the API.
-let sharedLineTextCaches = new WeakMap<PreparedTextWithSegments, Map<number, string[]>>()
-
-
 declare const preparedTextBrand: unique symbol
 
 type PreparedCore = {
@@ -794,7 +789,6 @@ export function layoutWithLines(prepared: PreparedTextWithSegments, maxWidth: nu
 
 export function clearCache(): void {
   clearAnalysisCaches()
-  sharedLineTextCaches = new WeakMap<PreparedTextWithSegments, Map<number, string[]>>()
   clearLineTextCaches()
   clearMeasurementCaches()
 }
