@@ -64,8 +64,8 @@ import {
 import {
   countPreparedLines,
   measurePreparedLineGeometry,
-  normalizePreparedLineStart,
-  stepPreparedLineGeometryFromChunk,
+  normalizeLineStart,
+  stepPreparedLineGeometry,
   walkPreparedLinesRaw,
 } from './line-break.js'
 import {
@@ -73,10 +73,6 @@ import {
   clearLineTextCaches,
   getLineTextCache,
 } from './line-text.js'
-
-// Rich-path only. Reuses grapheme splits while materializing multiple lines
-// from the same prepared handle, without pushing that cache into the API.
-let sharedLineTextCaches = new WeakMap<PreparedTextWithSegments, Map<number, string[]>>()
 
 // --- Public types ---
 
@@ -801,12 +797,12 @@ export function layoutNextLine(
     segmentIndex: start.segmentIndex,
     graphemeIndex: start.graphemeIndex,
   }
-  const chunkIndex = normalizePreparedLineStart(internal, end)
-  if (chunkIndex < 0) return null
+  const normalized = normalizeLineStart(internal, end)
+  if (normalized === null) return null
 
-  const lineStartSegmentIndex = end.segmentIndex
-  const lineStartGraphemeIndex = end.graphemeIndex
-  const width = stepPreparedLineGeometryFromChunk(internal, end, chunkIndex, maxWidth)
+  const lineStartSegmentIndex = normalized.segmentIndex
+  const lineStartGraphemeIndex = normalized.graphemeIndex
+  const width = stepPreparedLineGeometry(internal, normalized, maxWidth)
   if (width === null) return null
 
   return createLayoutLine(
@@ -830,12 +826,12 @@ export function layoutNextLineRange(
     segmentIndex: start.segmentIndex,
     graphemeIndex: start.graphemeIndex,
   }
-  const chunkIndex = normalizePreparedLineStart(internal, end)
-  if (chunkIndex < 0) return null
+  const normalized = normalizeLineStart(internal, end)
+  if (normalized === null) return null
 
-  const lineStartSegmentIndex = end.segmentIndex
-  const lineStartGraphemeIndex = end.graphemeIndex
-  const width = stepPreparedLineGeometryFromChunk(internal, end, chunkIndex, maxWidth)
+  const lineStartSegmentIndex = normalized.segmentIndex
+  const lineStartGraphemeIndex = normalized.graphemeIndex
+  const width = stepPreparedLineGeometry(internal, normalized, maxWidth)
   if (width === null) return null
 
   return createLayoutLineRange(
@@ -877,7 +873,6 @@ export function layoutWithLines(prepared: PreparedTextWithSegments, maxWidth: nu
 
 export function clearCache(): void {
   clearAnalysisCaches()
-  sharedLineTextCaches = new WeakMap<PreparedTextWithSegments, Map<number, string[]>>()
   clearLineTextCaches()
   clearMeasurementCaches()
 }

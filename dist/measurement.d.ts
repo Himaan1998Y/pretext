@@ -2,7 +2,8 @@ export type SegmentMetrics = {
     width: number;
     containsCJK: boolean;
     emojiCount?: number;
-    breakableFitAdvancesByMode?: Partial<Record<BreakableFitMode, number[] | null>>;
+    breakableFitMode?: BreakableFitMode;
+    breakableFitAdvances?: number[] | null;
 };
 export type EngineProfile = {
     lineFitEpsilon: number;
