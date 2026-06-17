@@ -1,0 +1,7 @@
+[
+  { "id": "zh-simple", "text": "你好世界", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "zh-paragraph", "text": "这是一个很长的中文文本，用来测试中文文本测量的准确性", "font": "14px Georgia", "maxWidth": 300, "lineHeight": 20 },
+  { "id": "ja-hiragana", "text": "こんにちは世界", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "ja-mixed", "text": "これは日本語のテキストです", "font": "14px Arial", "maxWidth": 350, "lineHeight": 18 },
+  { "id": "ko-korean", "text": "안녕하세요 세계", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 }
+]

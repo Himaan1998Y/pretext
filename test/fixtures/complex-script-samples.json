@@ -1,0 +1,7 @@
+[
+  { "id": "th-thai", "text": "สวัสดีชาวโลก", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "th-paragraph", "text": "นี่คือข้อความภาษาไทยที่ยาวขึ้นเพื่อทดสอบการแบ่งบรรทัด", "font": "14px Arial", "maxWidth": 300, "lineHeight": 18 },
+  { "id": "my-myanmar", "text": "မြန်မာ စာသားကို စမ်းသပ်ခြင်း", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "km-khmer", "text": "សូស្វាគមន៍ពិភពលោក", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "hi-devanagari", "text": "नमस्ते दुनिया", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 }
+]

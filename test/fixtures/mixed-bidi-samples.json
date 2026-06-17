@@ -1,0 +1,6 @@
+[
+  { "id": "mixed-en-ar", "text": "Hello مرحبا world", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "mixed-en-he", "text": "Good morning שלום בוקר everyone", "font": "14px Arial", "maxWidth": 350, "lineHeight": 18 },
+  { "id": "mixed-long", "text": "In English we say مرحبا but in Arabic they say hello", "font": "13px Courier New", "maxWidth": 400, "lineHeight": 18 },
+  { "id": "mixed-numbers", "text": "Numbers 123 و456 في النص", "font": "15px Arial", "maxWidth": 350, "lineHeight": 18 }
+]

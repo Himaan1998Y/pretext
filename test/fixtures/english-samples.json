@@ -1,0 +1,12 @@
+[
+  { "id": "en-simple", "text": "Hello world", "font": "16px Arial", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "en-paragraph", "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", "font": "14px Georgia", "maxWidth": 400, "lineHeight": 20 },
+  { "id": "en-punctuation", "text": "Hello, world! How are you?", "font": "12px Courier New", "maxWidth": 300, "lineHeight": 16 },
+  { "id": "en-long-word", "text": "supercalifragilisticexpialidocious", "font": "14px Helvetica", "maxWidth": 200, "lineHeight": 18 },
+  { "id": "en-numbers", "text": "The year 2024 with 365 days", "font": "13px Courier New", "maxWidth": 350, "lineHeight": 16 },
+  { "id": "en-quotes", "text": "\"Hello,\" she said.", "font": "16px Garamond", "maxWidth": 350, "lineHeight": 20 },
+  { "id": "en-short-width", "text": "The quick brown fox", "font": "14px Arial", "maxWidth": 100, "lineHeight": 16 },
+  { "id": "en-wide-width", "text": "The quick brown fox", "font": "14px Arial", "maxWidth": 1000, "lineHeight": 16 },
+  { "id": "en-contractions", "text": "It's don't can't won't", "font": "15px Times New Roman", "maxWidth": 300, "lineHeight": 18 },
+  { "id": "en-hyphenated", "text": "mother-in-law re-establish", "font": "14px Verdana", "maxWidth": 280, "lineHeight": 18 }
+]
