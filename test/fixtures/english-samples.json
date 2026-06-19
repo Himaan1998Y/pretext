@@ -1,0 +1,163 @@
+[
+  {
+    "id": "en-001",
+    "description": "Short English sentence",
+    "text": "Hello, world!",
+    "font": "16px Arial",
+    "maxWidth": 400,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-002",
+    "description": "English sentence that wraps at narrow width",
+    "text": "The quick brown fox jumps over the lazy dog.",
+    "font": "16px Arial",
+    "maxWidth": 200,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-003",
+    "description": "English sentence with punctuation",
+    "text": "Wait—don't go! Please, come back.",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-004",
+    "description": "English with numbers",
+    "text": "There are 42 items in 3 categories.",
+    "font": "14px Georgia",
+    "maxWidth": 250,
+    "lineHeight": 18,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-005",
+    "description": "Single long word that must break",
+    "text": "pneumonoultramicroscopicsilicovolcanoconiosis",
+    "font": "16px Arial",
+    "maxWidth": 200,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "es-001",
+    "description": "Spanish sentence with accents",
+    "text": "El niño jugó en el jardín con alegría.",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "es",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "fr-001",
+    "description": "French sentence with accents and ligatures",
+    "text": "L'été est beau à Paris, n'est-ce pas?",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "fr",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-006",
+    "description": "English with URL-like text",
+    "text": "Visit https://example.com/path?q=hello for more info.",
+    "font": "16px Arial",
+    "maxWidth": 300,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-007",
+    "description": "Long paragraph of English text",
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    "font": "16px Arial",
+    "maxWidth": 400,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-008",
+    "description": "English text at large font size",
+    "text": "Big headline text",
+    "font": "32px Arial",
+    "maxWidth": 300,
+    "lineHeight": 40,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-009",
+    "description": "English with soft hyphens",
+    "text": "Donaudampfschiff\u00ADfahrts\u00ADgesellschaft",
+    "font": "16px Arial",
+    "maxWidth": 150,
+    "lineHeight": 20,
+    "language": "de",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-010",
+    "description": "English with non-breaking space",
+    "text": "New\u00A0York is a city.",
+    "font": "16px Arial",
+    "maxWidth": 200,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-011",
+    "description": "English at very narrow width",
+    "text": "Word wrapping at very narrow container",
+    "font": "16px Arial",
+    "maxWidth": 80,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-012",
+    "description": "Empty string",
+    "text": "",
+    "font": "16px Arial",
+    "maxWidth": 400,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-013",
+    "description": "Single space",
+    "text": " ",
+    "font": "16px Arial",
+    "maxWidth": 400,
+    "lineHeight": 20,
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  },
+  {
+    "id": "en-014",
+    "description": "English with tabs in pre-wrap mode",
+    "text": "col1\tcol2\tcol3",
+    "font": "16px monospace",
+    "maxWidth": 400,
+    "lineHeight": 20,
+    "whiteSpace": "pre-wrap",
+    "language": "en",
+    "languageGroup": "ltr-simple"
+  }
+]
