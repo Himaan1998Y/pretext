@@ -9,7 +9,7 @@ export type LineBreakCursor = {
 export type PreparedLineBreakData = {
   widths: number[]
   lineEndFitAdvances: number[]
-  lineEndPaintAdvances: number[]
+  lineEndPaintAdvances: number[] // Painted contribution before terminal line-end letter-spacing
   kinds: SegmentBreakKind[]
   simpleLineWalkFastPath: boolean
   breakableFitAdvances: (number[] | null)[]
@@ -192,41 +192,6 @@ function fitSoftHyphenBreak(
   return { fitCount, fittedWidth }
 }
 
-function getTerminalLetterSpacing(
-  prepared: PreparedLineBreakData,
-  startSegmentIndex: number,
-  startGraphemeIndex: number,
-  endSegmentIndex: number,
-  endGraphemeIndex: number,
-): number {
-  if (prepared.letterSpacing === 0) return 0
-
-  if (endGraphemeIndex > 0) {
-    return prepared.spacingGraphemeCounts[endSegmentIndex]! > 0
-      ? prepared.letterSpacing
-      : 0
-  }
-
-  for (let i = endSegmentIndex - 1; i >= startSegmentIndex; i--) {
-    const kind = prepared.kinds[i]!
-    if (kind === 'space' || kind === 'zero-width-break' || kind === 'hard-break') continue
-    if (kind === 'soft-hyphen') {
-      if (i === endSegmentIndex - 1) return 0
-      continue
-    }
-
-    if (i === startSegmentIndex && startGraphemeIndex > 0) {
-      return prepared.letterSpacing
-    }
-
-    return prepared.spacingGraphemeCounts[i]! > 0
-      ? prepared.letterSpacing
-      : 0
-  }
-
-  return 0
-}
-
 function findChunkIndexForStart(prepared: PreparedLineBreakData, segmentIndex: number): number {
   if (prepared.chunkBySegment !== null && segmentIndex >= 0 && segmentIndex < prepared.chunkBySegment.length) {
     const c = prepared.chunkBySegment[segmentIndex]!
@@ -277,7 +242,8 @@ function normalizeLineStartInChunk(
   return chunkIndex + 1
 }
 
-function normalizeLineStartChunkIndex(
+// Mutates `cursor` to the next renderable line start and returns its chunk index.
+export function normalizePreparedLineStart(
   prepared: PreparedLineBreakData,
   cursor: LineBreakCursor,
 ): number {
@@ -286,6 +252,18 @@ function normalizeLineStartChunkIndex(
   const chunkIndex = findChunkIndexForStart(prepared, cursor.segmentIndex)
   if (chunkIndex < 0) return -1
   return normalizeLineStartInChunk(prepared, chunkIndex, cursor)
+}
+
+export function normalizeLineStart(
+  prepared: PreparedLineBreakData,
+  start: LineBreakCursor,
+): LineBreakCursor | null {
+  const cursor = {
+    segmentIndex: start.segmentIndex,
+    graphemeIndex: start.graphemeIndex,
+  }
+  const chunkIndex = normalizePreparedLineStart(prepared, cursor)
+  return chunkIndex < 0 ? null : cursor
 }
 
 function normalizeLineStartChunkIndexFromHint(
@@ -306,21 +284,6 @@ function normalizeLineStartChunkIndexFromHint(
   return normalizeLineStartInChunk(prepared, nextChunkIndex, cursor)
 }
 
-export function normalizeLineStart(
-  prepared: PreparedLineBreakData,
-  start: LineBreakCursor,
-): LineBreakCursor | null {
-  const cursor = {
-    segmentIndex: start.segmentIndex,
-    graphemeIndex: start.graphemeIndex,
-  }
-  const chunkIndex = normalizeLineStartChunkIndex(prepared, cursor)
-  return chunkIndex < 0 ? null : cursor
-}
-
-// Specialized hot-path counter that mirrors walkPreparedLines break semantics
-// without tracking cursors/widths. Must stay aligned — see layout.test.ts
-// "countPreparedLines stays aligned with the walked line counter".
 export function countPreparedLines(prepared: PreparedLineBreakData, maxWidth: number): number {
   return walkPreparedLinesRaw(prepared, maxWidth)
 }
@@ -473,8 +436,8 @@ function walkPreparedLinesSimple(
     const newW = lineW + w
     if (newW > fitLimit) {
       // CSS behavior: trailing collapsible space hangs past the line edge
-      // without triggering a line break — matches countPreparedLinesSimple.
-      // Update lineEndSegmentIndex so reconstruction includes the hanging space.
+      // without triggering a line break. Update lineEndSegmentIndex so
+      // reconstruction includes the hanging space.
       if (isSimpleCollapsibleSpace(kind)) {
         lineEndSegmentIndex = i + 1
         lineEndGraphemeIndex = 0
@@ -1196,8 +1159,8 @@ function stepPreparedSimpleLineGeometry(
 
     if (lineW + w > fitLimit) {
       // CSS behavior: trailing collapsible space hangs past the line edge
-      // without triggering a line break — matches countPreparedLinesSimple.
-      // Update lineEndSegmentIndex so reconstruction includes the hanging space.
+      // without triggering a line break. Update lineEndSegmentIndex so
+      // reconstruction includes the hanging space.
       if (isSimpleCollapsibleSpace(kind)) {
         lineEndSegmentIndex = i + 1
         lineEndGraphemeIndex = 0
@@ -1244,32 +1207,17 @@ function stepPreparedSimpleLineGeometry(
   return lineW
 }
 
-export function layoutNextLineRange(
+export function stepPreparedLineGeometryFromChunk(
   prepared: PreparedLineBreakData,
-  start: LineBreakCursor,
+  cursor: LineBreakCursor,
+  chunkIndex: number,
   maxWidth: number,
-): InternalLayoutLine | null {
-  const end: LineBreakCursor = {
-    segmentIndex: start.segmentIndex,
-    graphemeIndex: start.graphemeIndex,
+): number | null {
+  if (prepared.simpleLineWalkFastPath) {
+    return stepPreparedSimpleLineGeometry(prepared, cursor, maxWidth)
   }
-  const chunkIndex = normalizeLineStartChunkIndex(prepared, end)
-  if (chunkIndex < 0) return null
 
-  const lineStartSegmentIndex = end.segmentIndex
-  const lineStartGraphemeIndex = end.graphemeIndex
-  const width = prepared.simpleLineWalkFastPath
-    ? stepPreparedSimpleLineGeometry(prepared, end, maxWidth)
-    : stepPreparedChunkLineGeometry(prepared, end, chunkIndex, maxWidth)
-  if (width === null) return null
-
-  return {
-    startSegmentIndex: lineStartSegmentIndex,
-    startGraphemeIndex: lineStartGraphemeIndex,
-    endSegmentIndex: end.segmentIndex,
-    endGraphemeIndex: end.graphemeIndex,
-    width,
-  }
+  return stepPreparedChunkLineGeometry(prepared, cursor, chunkIndex, maxWidth)
 }
 
 export function stepPreparedLineGeometry(
@@ -1277,14 +1225,9 @@ export function stepPreparedLineGeometry(
   cursor: LineBreakCursor,
   maxWidth: number,
 ): number | null {
-  const chunkIndex = normalizeLineStartChunkIndex(prepared, cursor)
+  const chunkIndex = normalizePreparedLineStart(prepared, cursor)
   if (chunkIndex < 0) return null
-
-  if (prepared.simpleLineWalkFastPath) {
-    return stepPreparedSimpleLineGeometry(prepared, cursor, maxWidth)
-  }
-
-  return stepPreparedChunkLineGeometry(prepared, cursor, chunkIndex, maxWidth)
+  return stepPreparedLineGeometryFromChunk(prepared, cursor, chunkIndex, maxWidth)
 }
 
 export function measurePreparedLineGeometry(
@@ -1309,7 +1252,7 @@ export function measurePreparedLineGeometry(
   let maxLineWidth = 0
 
   if (!prepared.simpleLineWalkFastPath) {
-    let chunkIndex = normalizeLineStartChunkIndex(prepared, cursor)
+    let chunkIndex = normalizePreparedLineStart(prepared, cursor)
     while (chunkIndex >= 0) {
       const lineWidth = stepPreparedChunkLineGeometry(prepared, cursor, chunkIndex, maxWidth)
       if (lineWidth === null) {
